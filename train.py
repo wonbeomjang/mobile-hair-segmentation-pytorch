@@ -65,6 +65,7 @@ class Trainer:
 
                 self.net.zero_grad()
                 loss = MobileHairNetLoss(pred, image, mask)
+                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 iou = iou_loss(pred, mask)
