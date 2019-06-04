@@ -1,5 +1,5 @@
 # hair-segmentation-pytorch
-  <p>This repository is part of a program for previewing your own staining. To do this, you need to separate the hair from the head. So we  borrowed the model structure from the following article.</p>
+  <p>This repository is part of a program for previewing your own dyeing. To do this, you need to separate the hair from the head. So we  borrowed the model structure from the following article.</p>
   
  <p>[A reference article] (https://arxiv.org/abs/1712.07168)</p>
  
