@@ -1,10 +1,44 @@
 # hair-segmentation-pytorch
-This repository is part of a program for previewing your own dyeing. To do this, you need to separate the hair from the head. So we  borrowed the model structure from the following article.  
+This repository is part of a program for previewing your own dyeing on mobile device.
+To do this, you need to separate the hair from the head.
+And we have to use as light model as MobileNet to use in mobile device in real time.
+So we borrowed the model structure from the following article.  
   
-[A reference article](https://arxiv.org/abs/1712.07168)
+[Real-time deep hair matting on mobile devices](https://arxiv.org/abs/1712.07168) 
 
-## how to retrain
+## model architecture
+![network_architecture](./image/network_architecture.PNG)   
+This model is based on MobileNet.  
+To do semantic segmentation they transform MobileNet like SegNet.
+And add additional loss function to capture fine hair texture.
+## preparing datsets
+make directory like this
+```
+hair-segmentation-pytorch
+   |__ images
+   |
+   |__ masks
+   
+```
+expected image name  
+The name of the expected image pair is:  
+```
+ - hair-segmentation-pytorch/images/1.jpg 
+| 
+ - hair-segmentation-pytorch/masks/1.jpg  
+```
+## how to train
 run main
 ```
 python main.py
+```
+``` python
+from src.train import Trainer
+from data.dataloader import get_loader
+from config.config import get_config
+
+config = get_config()
+data_loader = get_loader(config.data_path, config.batch_size, config.image_size,
+                        shuffle=True, num_workers=int(config.workers))
+trainer = Trainer(config, data_loader)
 ```
