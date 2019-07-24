@@ -7,6 +7,7 @@ from loss.loss import iou_loss
 from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import numpy as np
+from torch.optim.adadelta import Adadelta
 
 class Trainer:
     def __init__(self, config, dataloader):
@@ -20,6 +21,9 @@ class Trainer:
         self.data_loader = dataloader
         self.image_len = len(dataloader)
         self.num_classes = config.num_classes
+        self.eps = config.eps
+        self.rho = config.rho
+        self.decay = config.decay
         self.build_model()
         self.sample_step = config.sample_step
         self.sample_dir = config.sample_dir
@@ -46,7 +50,7 @@ class Trainer:
 
     def train(self):
         MobileHairNetLoss = HairMatLoss().to(self.device)
-        optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, eps=1e-7)
+        optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho, weight_decay=self.decay)
 
         for epoch in range(self.epoch):
             for step, (image, mask) in enumerate(self.data_loader):

@@ -8,7 +8,11 @@ parser.add_argument('--num_classes', type=int, default=2, help='number of model 
 parser.add_argument('--batch_size', type=int, default=4, help='batch size')
 parser.add_argument('--epoch', type=int, default=60, help='number of epochs to train for')
 parser.add_argument('--decay_epoch', type=int, default=10, help='learning rate decay start epoch num')
-parser.add_argument('--lr', type=float, default=0.00004, help='learning rate')
+parser.add_argument('--lr', type=float, default=1.0, help='learning rate')
+parser.add_argument('--rho', type=float, default=0.95, help='adadelta rho')
+parser.add_argument('--eps', type=float, default=1e-7, help='adadelta eps')
+parser.add_argument('--decay', type=float, default=2e-5, help='adadelta decay')
+
 parser.add_argument('--sample_step', type=int, default=100, help='step of saving sample images')
 parser.add_argument('--checkpoint_step', type=int, default=100, help='step of saving checkpoints')
 parser.add_argument('--data_path', default='./dataset', help='path to dataset')
