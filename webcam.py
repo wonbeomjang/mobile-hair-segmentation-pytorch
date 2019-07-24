@@ -1,9 +1,10 @@
 import cv2
 import torch
-from model import MobileHairNet
-from config import get_config
+from model.model import MobileHairNet
+from config.config import get_config
 import os
 import numpy as np
+
 
 def get_mask(image, net, size = 224):
     image_h, image_w = image.shape[0], image.shape[1]
@@ -21,6 +22,7 @@ def get_mask(image, net, size = 224):
 
     return mask_cv2
 
+
 def alpha_image(image, mask, alpha = 0.1):
     color = np.zeros((mask.shape[0], mask.shape[1], 3))
     color[np.where(mask != 0)] = [0, 130, 255]
@@ -28,6 +30,7 @@ def alpha_image(image, mask, alpha = 0.1):
     alpha_hand = cv2.bitwise_and(alpha_hand, alpha_hand, mask=mask)
 
     return cv2.add(alpha_hand, image)
+
 
 if __name__ == "__main__":
     config = get_config()

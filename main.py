@@ -1,11 +1,8 @@
 import os
-import random
 
-import torch
-import torch.backends.cudnn as cudnn
-from config import get_config
-from dataloader import get_loader
-from train import Trainer
+from config.config import get_config
+from data.dataloader import get_loader
+from src.train import Trainer
 
 
 def main(config):

@@ -2,7 +2,7 @@ from skimage.color import rgb2gray
 from skimage import filters
 from sklearn.preprocessing import normalize
 import torch
-from config import get_config
+from config.config import get_config
 config = get_config()
 from torch.nn.modules.loss import _WeightedLoss
 import torch.nn.functional as F
@@ -46,8 +46,8 @@ class HairMatLoss(_WeightedLoss):
         cross_entropy_loss = F.cross_entropy(pred_flat, mask_flat, weight=self.weight
                                              , ignore_index=self.ignore_index, reduction=self.reduction)
         image_loss = image_gradient_loss(image, pred).to(self.device)
-        return cross_entropy_loss
-#        return torch.add(cross_entropy_loss, 0.5*image_loss.float())
+        # return cross_entropy_loss
+        return torch.add(cross_entropy_loss, 0.5*image_loss.float())
 
 def iou_loss(pred, mask):
     pred = torch.argmax(pred, 1).long()

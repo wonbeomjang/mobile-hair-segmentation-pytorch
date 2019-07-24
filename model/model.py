@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from config import get_config
+from config.config import get_config
 
 config = get_config()
 

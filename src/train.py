@@ -1,20 +1,11 @@
-from model import MobileHairNet
-from loss import HairMatLoss
+from model.model import MobileHairNet
+from loss.loss import HairMatLoss
 import os
 from glob import glob
 import torch
-import matplotlib.pyplot as plt
-import numpy as np
-from loss import iou_loss
+from loss.loss import iou_loss
+from torchvision.utils import save_image
 
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        m.weight.data.normal_(0.0, 0.02)
-
-    elif classname.find('BatchNorm') != -1:
-        m.weight.data.normal_(1.0, 0.02)
-        m.bias.data.fill_(0)
 
 class Trainer:
     def __init__(self, config, dataloader):
@@ -34,24 +25,23 @@ class Trainer:
 
     def build_model(self):
         self.net = MobileHairNet()
-        self.net.apply(weights_init)
         self.net.to(self.device)
         self.load_model()
 
     def load_model(self):
-        print(" * Load checkpoint in ", str(self.model_path))
+        print("[*] Load checkpoint in ", str(self.model_path))
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path)
 
         if not os.listdir(self.model_path):
-            print(" ! No checkpoint in ", str(self.model_path))
+            print("[!] No checkpoint in ", str(self.model_path))
             return
 
         model = glob(os.path.join(self.model_path, "MobileHairNet*.pth"))
         model.sort()
 
         self.net.load_state_dict(torch.load(model[-1], map_location=self.device))
-        print(" * Load Model from %s: " % str(self.model_path), str(model[-1]))
+        print("[*] Load Model from %s: " % str(self.model_path), str(model[-1]))
 
     def train(self):
         MobileHairNetLoss = HairMatLoss().to(self.device)
@@ -70,35 +60,13 @@ class Trainer:
                 optimizer.step()
                 iou = iou_loss(pred, mask)
 
-                print("epoch: [%d/%d] | image: [%d/%d] | loss: %.4f | IOU: %.4f" % (epoch, self.epoch, step, self.image_len, loss, iou))
+                print(f"epoch: [{epoch}/{self.epoch}] | image: [{step}/{self.image_len}] | loss: {loss:.4f} | "
+                      f"IOU: {iou:.4f}" )
 
                 # save sample images
                 if step % self.sample_step == 0:
-                    self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
+                    result = torch.cat((image[0], mask[0], torch.argmax(pred[0], 0)),3)
+                    save_image(result, os.path.join(self.sample_dir, f"epoch-{epoch}_step-{step}.png"))
                     print('[*] Saved sample images')
 
-            torch.save(self.net.state_dict(), '%s/MobileHairNet_epoch-%d.pth' % (self.checkpoint_dir, epoch))
-
-    def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
-        data = [real_img, real_mask, prediction]
-        names = ["Image", "Mask", "Prediction"]
-
-        fig = plt.figure()
-        for i, d in enumerate(data):
-            d = d.squeeze()
-            im = d.data.cpu().numpy()
-
-            if i > 0:
-                im = np.expand_dims(im, axis=0)
-                im = np.concatenate((im, im, im), axis=0)
-
-            im = (im.transpose(1, 2, 0) + 1) / 2
-
-            f = fig.add_subplot(1, 3, i + 1)
-            f.imshow(im)
-            f.set_title(names[i])
-            f.set_xticks([])
-            f.set_yticks([])
-
-        p = os.path.join(save_dir, "epoch-%s_step-%s.png" % (epoch, step))
-        plt.savefig(p)
+            torch.save(self.net.state_dict(), f'{self.checkpoint_dir}/MobileHairNet_epoch-{epoch}.pth')
