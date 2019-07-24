@@ -5,7 +5,8 @@ from glob import glob
 import torch
 from loss.loss import iou_loss
 from torchvision.utils import save_image
-
+import matplotlib.pyplot as plt
+import numpy as np
 
 class Trainer:
     def __init__(self, config, dataloader):
@@ -65,8 +66,31 @@ class Trainer:
 
                 # save sample images
                 if step % self.sample_step == 0:
-                    result = torch.cat((image[0], mask[0], torch.argmax(pred[0], 0)),3)
-                    save_image(result, os.path.join(self.sample_dir, f"epoch-{epoch}_step-{step}.png"))
+                    self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                     print('[*] Saved sample images')
 
             torch.save(self.net.state_dict(), f'{self.checkpoint_dir}/MobileHairNet_epoch-{epoch}.pth')
+
+    def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
+        data = [real_img, real_mask, prediction]
+        names = ["Image", "Mask", "Prediction"]
+
+        fig = plt.figure()
+        for i, d in enumerate(data):
+            d = d.squeeze()
+            im = d.data.cpu().numpy()
+
+            if i > 0:
+                im = np.expand_dims(im, axis=0)
+                im = np.concatenate((im, im, im), axis=0)
+
+            im = (im.transpose(1, 2, 0) + 1) / 2
+
+            f = fig.add_subplot(1, 3, i + 1)
+            f.imshow(im)
+            f.set_title(names[i])
+            f.set_xticks([])
+            f.set_yticks([])
+
+        p = os.path.join(save_dir, "epoch-%s_step-%s.png" % (epoch, step))
+        plt.savefig(p)

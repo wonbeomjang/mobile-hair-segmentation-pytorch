@@ -39,18 +39,20 @@ class Tester:
         print("[*] Load Model from %s: " % str(self.model_path), str(model[-1]))
 
     def test(self):
+        fig = plt.figure()
+        for epoch in range(int(self.num_test / self.batch_size)):
+            for step, (image, mask) in enumerate(self.data_loader):
+                image = image.to(self.device)
+                mask = mask.to(self.device)
+                criterion = self.net(image)
 
-        for step, (image, mask) in enumerate(self.data_loader):
-            image = image.to(self.device)
-            mask = mask.to(self.device)
-            pred = self.net(image)
-
-            result = torch.cat((image, mask, pred), 3)
-
-
-            print('[*] Saved sample images')
-        result_file = os.path.join(self.test_dir, "test.png")
+                subplot = fig.add_subplot(epoch + 1, 3, epoch + 1)
+                subplot.imshow(
+                    [image[0].cpu().numpy(), mask[0].cpu().numpy(), torch.argmax(criterion[0], 0).cpu().numpy()])
+                subplot.set_xticks([])
+                subplot.set_yticks([])
+                print('[*] Saved sample images')
+        dir_name = os.path.join(self.test_dir, "test.png")
         plt.savefig(dir_name)
-
 
 

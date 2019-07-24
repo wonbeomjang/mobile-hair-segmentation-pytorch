@@ -27,6 +27,7 @@ def main(config):
     trainer = Trainer(config, data_loader)
     trainer.train()
 
+
 if __name__ == "__main__":
     config = get_config()
     main(config)
