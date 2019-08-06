@@ -33,7 +33,7 @@ def image_gradient_loss(image, pred):
 
 class HairMatLoss(_WeightedLoss):
     def __init__(self, weight=None, size_average=None, ignore_index=-100,
-                 reduce=None, reduction='elementwise_mean'):
+                 reduce=None, reduction='mean'):
         super(HairMatLoss, self).__init__(weight, size_average, reduce, reduction)
         self.ignore_index = ignore_index
         self.loss = 0
@@ -47,7 +47,7 @@ class HairMatLoss(_WeightedLoss):
                                              , ignore_index=self.ignore_index, reduction=self.reduction)
         image_loss = image_gradient_loss(image, pred).to(self.device)
         # return cross_entropy_loss
-        return torch.add(cross_entropy_loss, 0.5*image_loss.float())
+        return cross_entropy_loss + 0.5*image_loss.float()
 
 def iou_loss(pred, mask):
     pred = torch.argmax(pred, 1).long()
