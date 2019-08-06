@@ -13,6 +13,8 @@ import torch.utils.data
 import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
+import torchvision.transforms.functional as TF
+import random
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -36,28 +38,40 @@ class Dataset(torch.utils.data.Dataset):
         image = Image.open(os.path.join(self.data_folder, 'images', self.image_name[index])).convert('RGB')
         mask = Image.open(os.path.join(self.data_folder, 'masks', self.image_name[index]))
 
-        transform = transforms.Compose([
-            transforms.RandomResizedCrop(min(image.size[0], image.size[1])),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.RandomRotation(degrees=(-180, 180))
-        ])
+        image, mask = self.transform(image, mask)
 
-        transform_image = transforms.Compose([
-            transform,
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
-
-        transform_mask = transforms.Compose([
-            transform,
-            transforms.ToTensor()
-        ])
-
-        return transform_image(image), transform_mask(mask)  # for hair segmentation
+        return image, mask
 
     def __len__(self):
         return len(self.image_name)
+
+    def transform(self, image, mask, image_size=224):
+        # Resize
+        resize = transforms.Resize(size=(image_size, image_size))
+        image = resize(image)
+        mask = resize(mask)
+
+        # Random crop
+        i, j, h, w = transforms.RandomCrop.get_params(
+            image, output_size=(image_size, image_size))
+        image = TF.crop(image, i, j, h, w)
+        mask = TF.crop(mask, i, j, h, w)
+
+        # Random horizontal flipping
+        if random.random() > 0.5:
+            image = TF.hflip(image)
+            mask = TF.hflip(mask)
+
+        # Random vertical flipping
+        if random.random() > 0.5:
+            image = TF.vflip(image)
+            mask = TF.vflip(mask)
+
+        # Transform to tensor
+        image = TF.to_tensor(image)
+        mask = TF.to_tensor(mask)
+        return image, mask
+
 
 
 def get_loader(data_folder, batch_size, image_size, shuffle, num_workers):
