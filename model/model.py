@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from config.config import get_config
+from torch.nn.init import xavier_normal_
 
 config = get_config()
 
@@ -120,3 +121,14 @@ class MobileHairNet(nn.Module):
         decode_layer5 = self.decode_layer5(decode_layer4)
         out = self.soft_max(decode_layer5)
         return out
+
+    def _init_weight(self):
+        layers = [self.encode_layer1, self.encode_layer2, self.encode_layer3, self.encode_layer4, self.encode_layer5,
+                  self.decode_layer1, self.decode_layer2, self.decode_layer3, self.decode_layer4, self.decode_layer5]
+        for layer in layers:
+            if isinstance(layer, nn.Conv2d):
+                xavier_normal_(layer.weight.data)
+
+            elif isinstance(layer, nn.BatchNorm2d):
+                layer.weight.data.normal_(1.0, 0.02)
+                layer.bias.data.fill_(0)

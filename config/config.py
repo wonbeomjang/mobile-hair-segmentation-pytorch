@@ -8,7 +8,7 @@ parser.add_argument('--num_classes', type=int, default=2, help='number of model 
 parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 parser.add_argument('--epoch', type=int, default=60, help='number of epochs to train for')
 parser.add_argument('--decay_epoch', type=int, default=10, help='learning rate decay start epoch num')
-parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.00004, help='learning rate')
 parser.add_argument('--rho', type=float, default=0.95, help='adadelta rho')
 parser.add_argument('--eps', type=float, default=1e-7, help='adadelta eps')
 parser.add_argument('--decay', type=float, default=2e-5, help='adadelta decay')

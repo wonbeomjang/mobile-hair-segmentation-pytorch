@@ -32,6 +32,7 @@ class Trainer:
     def build_model(self):
         self.net = MobileHairNet()
         self.net.to(self.device)
+        self.net._init_weight()
         self.load_model()
 
     def load_model(self):
