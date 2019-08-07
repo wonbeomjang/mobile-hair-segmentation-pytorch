@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.optim.adadelta import Adadelta
 
+
 class Trainer:
     def __init__(self, config, dataloader):
         self.batch_size = config.batch_size

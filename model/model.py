@@ -4,6 +4,7 @@ from config.config import get_config
 
 config = get_config()
 
+
 class _Layer_Depwise_Encode(nn.Module):
     def __init__(self, in_channels, out_channels,kernel_size=3, reserve=False): #nf==64
         self.stride = int(out_channels/in_channels)
@@ -16,12 +17,13 @@ class _Layer_Depwise_Encode(nn.Module):
             nn.ReLU6(inplace=True),
             nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, stride=self.stride),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU6(inplace=True)
+            nn.ReLU(inplace=True)
         )
 
     def forward(self, x):
         out = self.layer(x)
         return out
+
 
 class _Layer_Depwise_Decode(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size=3,  stride=1):
@@ -29,7 +31,7 @@ class _Layer_Depwise_Decode(nn.Module):
         self.layer = nn.Sequential(
             nn.Conv2d(in_channels=in_channel, out_channels=in_channel, kernel_size=kernel_size, stride=stride, padding=1, groups=in_channel),
             nn.Conv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=1, stride=stride),
-            nn.ReLU6(inplace=True)
+            nn.ReLU(inplace=True)
         )
     def forward(self, x):
         out = self.layer(x)
