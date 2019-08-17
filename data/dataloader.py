@@ -17,6 +17,38 @@ import torchvision.transforms.functional as TF
 import random
 
 
+def transform(image, mask, image_size=224):
+    # Resize
+    resize = transforms.Resize(size=(image_size, image_size))
+    image = resize(image)
+    mask = resize(mask)
+
+    # Random crop
+    i, j, h, w = transforms.RandomCrop.get_params(
+        image, output_size=(image_size, image_size))
+    image = TF.crop(image, i, j, h, w)
+    mask = TF.crop(mask, i, j, h, w)
+
+    # Random horizontal flipping
+    if random.random() > 0.5:
+        image = TF.hflip(image)
+        mask = TF.hflip(mask)
+
+    # Random vertical flipping
+    if random.random() > 0.5:
+        image = TF.vflip(image)
+        mask = TF.vflip(mask)
+
+    # Make gray scale image
+    gray_image = TF.to_grayscale(image)
+
+    # Transform to tensor
+    image = TF.to_tensor(image)
+    mask = TF.to_tensor(mask)
+    gray_image = TF.to_tensor(gray_image)
+    return image, gray_image, mask
+
+
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, data_folder, image_size):
         self.data_folder = data_folder
@@ -38,40 +70,12 @@ class Dataset(torch.utils.data.Dataset):
         image = Image.open(os.path.join(self.data_folder, 'images', self.image_name[index])).convert('RGB')
         mask = Image.open(os.path.join(self.data_folder, 'masks', self.image_name[index]))
 
-        image, mask = self.transform(image, mask)
+        image, gray_image, mask = transform(image, mask)
 
-        return image, mask
+        return image, gray_image, mask
 
     def __len__(self):
         return len(self.image_name)
-
-    def transform(self, image, mask, image_size=224):
-        # Resize
-        resize = transforms.Resize(size=(image_size, image_size))
-        image = resize(image)
-        mask = resize(mask)
-
-        # Random crop
-        i, j, h, w = transforms.RandomCrop.get_params(
-            image, output_size=(image_size, image_size))
-        image = TF.crop(image, i, j, h, w)
-        mask = TF.crop(mask, i, j, h, w)
-
-        # Random horizontal flipping
-        if random.random() > 0.5:
-            image = TF.hflip(image)
-            mask = TF.hflip(mask)
-
-        # Random vertical flipping
-        if random.random() > 0.5:
-            image = TF.vflip(image)
-            mask = TF.vflip(mask)
-
-        # Transform to tensor
-        image = TF.to_tensor(image)
-        mask = TF.to_tensor(mask)
-        return image, mask
-
 
 
 def get_loader(data_folder, batch_size, image_size, shuffle, num_workers):

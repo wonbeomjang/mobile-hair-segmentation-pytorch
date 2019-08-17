@@ -1,5 +1,5 @@
 from model.model import MobileHairNet
-from loss.loss import HairMatLoss
+from loss.loss import ImageGradientLoss
 import os
 from glob import glob
 import torch
@@ -8,7 +8,7 @@ from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import numpy as np
 from torch.optim.adadelta import Adadelta
-
+import torch.nn as nn
 
 class Trainer:
     def __init__(self, config, dataloader):
@@ -25,9 +25,10 @@ class Trainer:
         self.eps = config.eps
         self.rho = config.rho
         self.decay = config.decay
-        self.build_model()
         self.sample_step = config.sample_step
         self.sample_dir = config.sample_dir
+        self.gradient_loss_weight = config.gradient_loss_weight
+        self.build_model()
 
     def build_model(self):
         self.net = MobileHairNet()
@@ -51,24 +52,35 @@ class Trainer:
         print("[*] Load Model from %s: " % str(self.model_path), str(model[-1]))
 
     def train(self):
-        MobileHairNetLoss = HairMatLoss().to(self.device)
+        image_gradient_criterion = ImageGradientLoss().to(self.device)
+        bce_criterion = nn.CrossEntropyLoss().to(self.device)
         optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho, weight_decay=self.decay)
 
         for epoch in range(self.epoch):
-            for step, (image, mask) in enumerate(self.data_loader):
+            for step, (image, gray_image, mask) in enumerate(self.data_loader):
                 image = image.to(self.device)
                 mask = mask.to(self.device)
+                gray_image = gray_image.to(self.device)
+
                 pred = self.net(image)
 
-                self.net.zero_grad()
-                loss = MobileHairNetLoss(pred, image, mask)
+                pred_flat = pred.permute(0, 2, 3, 1).contiguous().view(-1, self.num_classes)
+                mask_flat = mask.squeeze(1).view(-1).long()
+
+                # preds_flat.shape (N*224*224, 2)
+                # masks_flat.shape (N*224*224, 1)
+                image_gradient_loss = image_gradient_criterion(pred, gray_image)
+                bce_loss = bce_criterion(pred_flat, mask_flat)
+
+                loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
+
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 iou = iou_loss(pred, mask)
 
                 print(f"epoch: [{epoch}/{self.epoch}] | image: [{step}/{self.image_len}] | loss: {loss:.4f} | "
-                      f"IOU: {iou:.4f}" )
+                      f"IOU: {iou:.4f}")
 
                 # save sample images
                 if step % self.sample_step == 0:
