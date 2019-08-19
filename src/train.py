@@ -4,7 +4,7 @@ import os
 from glob import glob
 import torch
 from loss.loss import iou_loss
-from torchvision.utils import save_image
+from util.util import LambdaLR
 import matplotlib.pyplot as plt
 import numpy as np
 from torch.optim.adadelta import Adadelta
@@ -16,6 +16,7 @@ class Trainer:
         self.config = config
         self.lr = config.lr
         self.epoch = config.epoch
+        self.num_epoch = config.num_epoch
         self.checkpoint_dir = config.checkpoint_dir
         self.model_path = config.checkpoint_dir
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -28,12 +29,17 @@ class Trainer:
         self.sample_step = config.sample_step
         self.sample_dir = config.sample_dir
         self.gradient_loss_weight = config.gradient_loss_weight
+        self.decay_batch_size = config.decay_batch_size
+
         self.build_model()
+        self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho, weight_decay=self.decay)
+        self.lr_scheduler_discriminator = torch.optim.lr_scheduler.LambdaLR(self.optimizer, LambdaLR(self.num_epoch,
+                                                                                                     self.epoch,
+                                                                                                     len(self.data_loader),
+                                                                                                     self.decay_batch_size).step)
 
     def build_model(self):
-        self.net = MobileHairNet()
-        self.net.to(self.device)
-        self.net._init_weight()
+        self.net = MobileHairNet().to(self.device)
         self.load_model()
 
     def load_model(self):
@@ -54,10 +60,10 @@ class Trainer:
     def train(self):
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
-        optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho, weight_decay=self.decay)
 
-        for epoch in range(self.epoch):
+        for epoch in range(self.epoch, self.num_epoch):
             for step, (image, gray_image, mask) in enumerate(self.data_loader):
+                print(self.optimizer.param_groups[0]['lr'])
                 image = image.to(self.device)
                 mask = mask.to(self.device)
                 gray_image = gray_image.to(self.device)
@@ -74,12 +80,12 @@ class Trainer:
 
                 loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
 
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 loss.backward()
-                optimizer.step()
+                self.optimizer.step()
                 iou = iou_loss(pred, mask)
 
-                print(f"epoch: [{epoch}/{self.epoch}] | image: [{step}/{self.image_len}] | loss: {loss:.4f} | "
+                print(f"epoch: [{epoch}/{self.num_epoch}] | image: [{step}/{self.image_len}] | loss: {loss:.4f} | "
                       f"IOU: {iou:.4f}")
 
                 # save sample images

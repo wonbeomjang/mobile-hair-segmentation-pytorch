@@ -46,6 +46,10 @@ def transform(image, mask, image_size=224):
     image = TF.to_tensor(image)
     mask = TF.to_tensor(mask)
     gray_image = TF.to_tensor(gray_image)
+
+    # Normalize Data
+    image = TF.normalize(image, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+
     return image, gray_image, mask
 
 

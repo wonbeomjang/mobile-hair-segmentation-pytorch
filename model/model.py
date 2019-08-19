@@ -1,13 +1,11 @@
-import torch
 import torch.nn as nn
 from config.config import get_config
-from torch.nn.init import xavier_normal_
 
 config = get_config()
 
 
 class _Layer_Depwise_Encode(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, reserve=False): #nf==64
+    def __init__(self, in_channels, out_channels, kernel_size=3, reserve=False):
         self.stride = int(out_channels/in_channels)
         if reserve == True:
             self.stride = 1
@@ -34,43 +32,14 @@ class _Layer_Depwise_Decode(nn.Module):
             nn.Conv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=1, stride=stride),
             nn.ReLU(inplace=True)
         )
+
     def forward(self, x):
         out = self.layer(x)
         return out
 
-class MobileNet(nn.Module):
-    def __init__(self, im_size=224, nf=32, kernel_size=3):
-        super(MobileNet, self).__init__()
-        self.encode_layer1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=nf, kernel_size=kernel_size, stride=2, padding=1),
-            _Layer_Depwise_Encode(nf, 2 * nf, reserve=True)
-        )
-        self.encode_layer2 = nn.Sequential(
-            _Layer_Depwise_Encode(2 * nf, 4 * nf),
-            _Layer_Depwise_Encode(4 * nf, 4 * nf),
-        )
-        self.encode_layer3 = nn.Sequential(
-            _Layer_Depwise_Encode(4 * nf, 8 * nf),
-            _Layer_Depwise_Encode(8 * nf, 8 * nf)
-        )
-        self.encode_layer4 = nn.Sequential(
-            _Layer_Depwise_Encode(8 * nf, 16 * nf),
-            _Layer_Depwise_Encode(16 * nf, 16 * nf),
-            _Layer_Depwise_Encode(16 * nf, 16 * nf),
-            _Layer_Depwise_Encode(16 * nf, 16 * nf),
-            _Layer_Depwise_Encode(16 * nf, 16 * nf),
-            _Layer_Depwise_Encode(16 * nf, 16 * nf),
-        )
-        self.encode_layer5 = nn.Sequential(
-            _Layer_Depwise_Encode(16 * nf, 32 * nf),
-            _Layer_Depwise_Encode(32 * nf, 32 * nf)
-        )
-        self.avg_pool = nn.AvgPool2d()
-        self.fc = nn.Linear(1024, 1000)
-        self.soft_max = nn.Softmax
 
 class MobileHairNet(nn.Module):
-    def __init__(self, im_size=224, nf=32, kernel_size=3):
+    def __init__(self, nf=32, kernel_size=3, initialize=True):
         super(MobileHairNet, self).__init__()
         self.nf = nf
 #######################################################################################################################
@@ -101,6 +70,7 @@ class MobileHairNet(nn.Module):
         self.encode_layer5 = nn.Sequential(
             _Layer_Depwise_Encode(16 * nf, 32 * nf),
             _Layer_Depwise_Encode(32 * nf, 32 * nf)
+        )
 #######################################################################################################################
 #                                                                                                                     #
 #                                               DECODER                                                               #
@@ -133,6 +103,9 @@ class MobileHairNet(nn.Module):
 
         self.soft_max = nn.Softmax(dim=1)
 
+        if initialize:
+            self._init_weight()
+
     def forward(self, x):
 #connet encode 4-> decode 1, encode 3-> decode 2, encode 2-> decode 3, encode 1-> decode 4
         encode_layer1 = self.encode_layer1(x)
@@ -156,12 +129,14 @@ class MobileHairNet(nn.Module):
         return out
 
     def _init_weight(self):
-        layers = [self.encode_layer1, self.encode_layer2, self.encode_layer3, self.encode_layer4, self.encode_layer5,
-                  self.decode_layer1, self.decode_layer2, self.decode_layer3, self.decode_layer4, self.decode_layer5]
-        for layer in layers:
-            if isinstance(layer, nn.Conv2d):
-                xavier_normal_(layer.weight.data)
-
-            elif isinstance(layer, nn.BatchNorm2d):
-                layer.weight.data.normal_(1.0, 0.02)
-                layer.bias.data.fill_(0)
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.zeros_(m.bias)
