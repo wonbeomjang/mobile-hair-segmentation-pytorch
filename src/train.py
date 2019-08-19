@@ -63,7 +63,6 @@ class Trainer:
 
         for epoch in range(self.epoch, self.num_epoch):
             for step, (image, gray_image, mask) in enumerate(self.data_loader):
-                print(self.optimizer.param_groups[0]['lr'])
                 image = image.to(self.device)
                 mask = mask.to(self.device)
                 gray_image = gray_image.to(self.device)
