@@ -51,7 +51,7 @@ class Trainer:
             print("[!] No checkpoint in ", str(self.model_path))
             return
 
-        model = glob(os.path.join(self.model_path, "MobileHairNet*.pth"))
+        model = glob(os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch-1}.pth"))
         model.sort()
 
         self.net.load_state_dict(torch.load(model[-1], map_location=self.device))
