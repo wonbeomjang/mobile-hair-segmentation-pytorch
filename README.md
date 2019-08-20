@@ -20,7 +20,7 @@ And add additional loss function to capture fine hair texture.
 ## preparing datsets
 make directory like this
 ```
-hair-segmentation-pytorch
+data
    |__ images
    |
    |__ masks
@@ -29,9 +29,9 @@ hair-segmentation-pytorch
 expected image name  
 The name of the expected image pair is:  
 ```
- - hair-segmentation-pytorch/images/1.jpg 
+ - data/images/1.jpg 
 | 
- - hair-segmentation-pytorch/masks/1.jpg  
+ - data/masks/1.jpg  
 ```
 ## how to train
 run main
