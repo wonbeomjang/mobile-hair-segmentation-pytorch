@@ -6,12 +6,6 @@ So we borrowed the model structure from the following article.
   
 [Real-time deep hair matting on mobile devices](https://arxiv.org/abs/1712.07168) 
 
-## Overall result
-it use argmax function to get mask  
-
-![network_architecture](./image/sample_image.PNG)
-![network_architecture](./image/webcam.gif)
-
 ## model architecture
 ![network_architecture](./image/network_architecture.PNG)   
 This model is based on MobileNet.  
@@ -48,3 +42,9 @@ data_loader = get_loader(config.data_path, config.batch_size, config.image_size,
                         shuffle=True, num_workers=int(config.workers))
 trainer = Trainer(config, data_loader)
 ```
+
+## Overall result
+it use argmax function to get mask  
+
+![network_architecture](./image/sample_image.PNG)
+![network_architecture](./image/webcam.gif)
