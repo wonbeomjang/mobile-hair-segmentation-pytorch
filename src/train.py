@@ -4,11 +4,12 @@ import os
 from glob import glob
 import torch
 from loss.loss import iou_loss
-from util.util import LambdaLR
+from util.util import LambdaLR, AverageMeter
 import matplotlib.pyplot as plt
 import numpy as np
 from torch.optim.adadelta import Adadelta
 import torch.nn as nn
+
 
 class Trainer:
     def __init__(self, config, dataloader):
@@ -51,17 +52,25 @@ class Trainer:
             print("[!] No checkpoint in ", str(self.model_path))
             return
 
-        model = glob(os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch-1}.pth"))
+        model_path = os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch-1}.pth")
+        model = glob(model_path)
         model.sort()
+        if not model:
+            print(f"[!] No Checkpoint in {model_path}")
+            return
 
         self.net.load_state_dict(torch.load(model[-1], map_location=self.device))
-        print("[*] Load Model from %s: " % str(self.model_path), str(model[-1]))
+        print(f"[*] Load Model from {model[-1]}: ")
 
     def train(self):
+        bce_losses = AverageMeter()
+        image_gradient_losses = AverageMeter()
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
 
         for epoch in range(self.epoch, self.num_epoch):
+            bce_losses.reset()
+            image_gradient_losses.reset()
             for step, (image, gray_image, mask) in enumerate(self.data_loader):
                 image = image.to(self.device)
                 mask = mask.to(self.device)
@@ -82,12 +91,16 @@ class Trainer:
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+
+                bce_losses.update(bce_loss.item(), self.batch_size)
+                image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
                 iou = iou_loss(pred, mask)
 
-                print(f"epoch: [{epoch}/{self.num_epoch}] | image: [{step}/{self.image_len}] | loss: {loss:.4f} | "
-                      f"IOU: {iou:.4f}")
-
                 # save sample images
+                if step % 10 == 0:
+                    print(f"Epoch: [{epoch}/{self.num_epoch}] | Step: [{step}/{self.image_len}] | "
+                          f"Bce Loss: {bce_losses.avg:.4f} | Image Gradient Loss: {image_gradient_losses.avg:.4f} | "
+                          f"IOU: {iou:.4f}")
                 if step % self.sample_step == 0:
                     self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                     print('[*] Saved sample images')

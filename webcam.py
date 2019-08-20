@@ -4,6 +4,7 @@ from model.model import MobileHairNet
 from config.config import get_config
 import os
 import numpy as np
+from glob import glob
 
 
 def get_mask(image, net, size = 224):
@@ -16,14 +17,14 @@ def get_mask(image, net, size = 224):
     down_size_image = np.transpose(down_size_image, (0, 3, 1, 2)).to(device)
     mask = net(down_size_image)
 
-    mask = torch.argmax(torch.squeeze(mask), 0)
+    mask = torch.squeeze(mask).argmax(0)
     mask_cv2 = mask.data.cpu().numpy().astype(np.uint8) * 255
     mask_cv2 = cv2.resize(mask_cv2, (image_w, image_h))
 
     return mask_cv2
 
 
-def alpha_image(image, mask, alpha = 0.1):
+def alpha_image(image, mask, alpha=0.1):
     color = np.zeros((mask.shape[0], mask.shape[1], 3))
     color[np.where(mask != 0)] = [0, 130, 255]
     alpha_hand = ((1 - alpha) * image + alpha * color).astype(np.uint8)
@@ -34,10 +35,10 @@ def alpha_image(image, mask, alpha = 0.1):
 
 if __name__ == "__main__":
     config = get_config()
-    pretrained = os.listdir(config.checkpoint_dir)[-1]
+    pretrained = glob(os.path.join(config.checkpoint_dir, f"MobileHairNet_epoch-{config.epoch-1}.pth"))[-1]
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = MobileHairNet().to(device)
-    net.load_state_dict(torch.load(os.path.join(config.checkpoint_dir, pretrained), map_location=device))
+    net.load_state_dict(torch.load(pretrained, map_location=device))
     cam = cv2.VideoCapture(0)
     if not cam.isOpened():
         raise Exception("webcam is not detected")

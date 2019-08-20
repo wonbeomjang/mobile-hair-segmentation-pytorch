@@ -1,10 +1,10 @@
 import torch
 
-from torch.nn.modules.loss import _Loss
+from torch.nn.modules.loss import _Loss, _WeightedLoss
 import torch.nn.functional as F
 
 
-class ImageGradientLoss(_Loss):
+class ImageGradientLoss(_WeightedLoss):
     def __init__(self, size_average=None, reduce=None, reduction='mean'):
         super(ImageGradientLoss, self).__init__(size_average, reduce, reduction)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

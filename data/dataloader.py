@@ -18,8 +18,12 @@ import random
 
 
 def transform(image, mask, image_size=224):
+    num_pad = int(random.random() * image_size)
+    image = TF.pad(image, num_pad)
+    mask = TF.pad(mask, num_pad)
+
     # Resize
-    resize = transforms.Resize(size=(image_size, image_size))
+    resize = transforms.Resize(size=(2 * image_size, 2 * image_size))
     image = resize(image)
     mask = resize(mask)
 
@@ -33,6 +37,8 @@ def transform(image, mask, image_size=224):
     if random.random() > 0.5:
         image = TF.hflip(image)
         mask = TF.hflip(mask)
+
+
 
     # Random vertical flipping
     if random.random() > 0.5:
