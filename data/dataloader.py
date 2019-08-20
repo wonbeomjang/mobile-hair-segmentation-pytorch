@@ -12,38 +12,37 @@ import os
 import torch.utils.data
 import torchvision.transforms as transforms
 from PIL import Image
-import numpy as np
 import torchvision.transforms.functional as TF
 import random
 
 
 def transform(image, mask, image_size=224):
-    num_pad = int(random.random() * image_size)
-    image = TF.pad(image, num_pad)
-    mask = TF.pad(mask, num_pad)
+    # num_pad = int(random.random() * image_size)
+    # image = TF.pad(image, num_pad, fill=(int(random.random() * 255), int(random.random() * 255), int(random.random() * 255)))
+    # mask = TF.pad(mask, num_pad)
 
     # Resize
-    resize = transforms.Resize(size=(2 * image_size, 2 * image_size))
+    resize = transforms.Resize(size=(image_size, image_size))
     image = resize(image)
     mask = resize(mask)
 
-    # Random crop
-    i, j, h, w = transforms.RandomCrop.get_params(
-        image, output_size=(image_size, image_size))
-    image = TF.crop(image, i, j, h, w)
-    mask = TF.crop(mask, i, j, h, w)
-
-    # Random horizontal flipping
-    if random.random() > 0.5:
-        image = TF.hflip(image)
-        mask = TF.hflip(mask)
-
-
-
-    # Random vertical flipping
-    if random.random() > 0.5:
-        image = TF.vflip(image)
-        mask = TF.vflip(mask)
+    # # Random crop
+    # i, j, h, w = transforms.RandomCrop.get_params(
+    #     image, output_size=(image_size, image_size))
+    # image = TF.crop(image, i, j, h, w)
+    # mask = TF.crop(mask, i, j, h, w)
+    #
+    # # Random horizontal flipping
+    # if random.random() > 0.5:
+    #     image = TF.hflip(image)
+    #     mask = TF.hflip(mask)
+    #
+    #
+    #
+    # # Random vertical flipping
+    # if random.random() > 0.5:
+    #     image = TF.vflip(image)
+    #     mask = TF.vflip(mask)
 
     # Make gray scale image
     gray_image = TF.to_grayscale(image)

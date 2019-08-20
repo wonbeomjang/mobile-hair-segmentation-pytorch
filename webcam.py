@@ -40,6 +40,7 @@ if __name__ == "__main__":
     net = MobileHairNet().to(device)
     net.load_state_dict(torch.load(pretrained, map_location=device))
     cam = cv2.VideoCapture(0)
+
     if not cam.isOpened():
         raise Exception("webcam is not detected")
 

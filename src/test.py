@@ -14,9 +14,10 @@ class Tester:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.data_loader = dataloader
         self.num_classes = config.num_classes
-        self.build_model()
         self.num_test = config.num_test
         self.test_dir = config.sample_image_dir
+        self.epoch = config.epoch
+        self.build_model()
 
     def build_model(self):
         self.net = MobileHairNet()
@@ -32,11 +33,14 @@ class Tester:
             print("[!] No checkpoint in ", str(self.model_path))
             return
 
-        model = glob(os.path.join(self.model_path, "MobileHairNet*.pth"))
+        model_path = os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch-1}.pth")
+        model = glob(model_path)
         model.sort()
+        if not model:
+            raise Exception(f"[!] No Checkpoint in {model_path}")
 
         self.net.load_state_dict(torch.load(model[-1], map_location=self.device))
-        print("[*] Load Model from %s: " % str(self.model_path), str(model[-1]))
+        print(f"[*] Load Model from {model[-1]}: ")
 
     def test(self):
         fig = plt.figure()
