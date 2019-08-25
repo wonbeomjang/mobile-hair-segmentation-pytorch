@@ -1,4 +1,4 @@
-# hair-segmentation-pytorch
+# mobile-hair-segmentation-pytorch
 This repository is part of a program for previewing your own dyeing on mobile device.
 To do this, you need to separate the hair from the head.
 And we have to use as light model as MobileNet to use in mobile device in real time.
