@@ -49,7 +49,7 @@ class Tester:
                 mask = mask.to(self.device)
                 criterion = self.net(image)
 
-                for idx, img in enumerate([image, mask, criterion]):
+                for idx, img in enumerate([image[0], mask[0], criterion[0]]):
                     subplot = fig.add_subplot(1, 3, idx + 1)
                     subplot.imshow(img.cpu().numpy().transposse(1, 2, 0))
                     subplot.set_xticks([])
