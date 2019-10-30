@@ -2,7 +2,9 @@ import os
 
 from config.config import get_config
 from data.dataloader import get_loader
+import data.test_loader
 from src.train import Trainer
+from src.test import Tester
 
 
 def main(config):
@@ -22,10 +24,15 @@ def main(config):
     # cudnn.benchmark = True
 
     data_loader = get_loader(config.data_path, config.batch_size, config.image_size,
-                            shuffle=True, num_workers=int(config.workers))
+                             shuffle=True, num_workers=int(config.workers))
 
-    trainer = Trainer(config, data_loader)
-    trainer.train()
+    # trainer = Trainer(config, data_loader)
+    # trainer.train()
+
+    test_loader = data.test_loader.get_loader(config.test_data_path, config.test_batch_size, config.image_size,
+                                              shuffle=None, num_workers=int(config.workers))
+    tester = Tester(config, test_loader)
+    tester.test()
 
 
 if __name__ == "__main__":

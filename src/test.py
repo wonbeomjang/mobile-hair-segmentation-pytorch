@@ -1,6 +1,7 @@
 import torch
 from model.model import MobileHairNet
 import os
+import numpy as np
 from glob import glob
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image
@@ -15,7 +16,7 @@ class Tester:
         self.data_loader = dataloader
         self.num_classes = config.num_classes
         self.num_test = config.num_test
-        self.test_dir = config.sample_image_dir
+        self.sample_dir = config.sample_dir
         self.epoch = config.epoch
         self.build_model()
 
@@ -33,7 +34,7 @@ class Tester:
             print("[!] No checkpoint in ", str(self.model_path))
             return
 
-        model_path = os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch-1}.pth")
+        model_path = os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch}.pth")
         model = glob(model_path)
         model.sort()
         if not model:
@@ -43,20 +44,12 @@ class Tester:
         print(f"[*] Load Model from {model[-1]}: ")
 
     def test(self):
-        fig = plt.figure()
-        for epoch in range(int(self.num_test / self.batch_size)):
-            for step, (image, mask) in enumerate(self.data_loader):
-                image = image.to(self.device)
-                mask = mask.to(self.device)
-                criterion = self.net(image)
+        for step, (image, mask) in enumerate(self.data_loader):
+            image = image.to(self.device)
+            mask = mask.to(self.device).repeat_interleave(3, 1)
+            criterion = self.net(image)[:, 1, :, :].repeat_interleave(3, 0).unsqueeze(0)
+            torch.cat([image, criterion, mask])
 
-                subplot = fig.add_subplot(epoch + 1, 3, epoch + 1)
-                subplot.imshow(
-                    [image[0].cpu().numpy(), mask[0].cpu().numpy(), torch.argmax(criterion[0], 0).cpu().numpy()])
-                subplot.set_xticks([])
-                subplot.set_yticks([])
-                print('[*] Saved sample images')
-        dir_name = os.path.join(self.test_dir, "test.png")
-        plt.savefig(dir_name)
-
+            save_image(torch.cat([image, criterion, mask]), os.path.join(self.sample_dir, f"{step}.png"))
+            print('[*] Saved sample images')
 

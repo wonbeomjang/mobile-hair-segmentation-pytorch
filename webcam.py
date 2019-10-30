@@ -17,8 +17,9 @@ def get_mask(image, net, size = 224):
     down_size_image = np.transpose(down_size_image, (0, 3, 1, 2)).to(device)
     mask = net(down_size_image)
 
-    mask = torch.squeeze(mask).argmax(0)
-    mask_cv2 = mask.data.cpu().numpy().astype(np.uint8) * 255
+    mask = torch.squeeze(mask[:, 1, :, :])
+    mask_cv2 = mask.data.cpu().numpy() * 255
+    mask_cv2 = mask_cv2.astype(np.uint8)
     mask_cv2 = cv2.resize(mask_cv2, (image_w, image_h))
 
     return mask_cv2
@@ -35,7 +36,7 @@ def alpha_image(image, mask, alpha=0.1):
 
 if __name__ == "__main__":
     config = get_config()
-    pretrained = glob(os.path.join(config.checkpoint_dir, f"MobileHairNet_epoch-{config.epoch-1}.pth"))[-1]
+    pretrained = glob(os.path.join(config.checkpoint_dir, f"MobileHairNet_epoch-{config.epoch}.pth"))[-1]
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = MobileHairNet().to(device)
     net.load_state_dict(torch.load(pretrained, map_location=device))
