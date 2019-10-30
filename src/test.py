@@ -3,6 +3,7 @@ from model.model import MobileHairNet
 import os
 from glob import glob
 import matplotlib.pyplot as plt
+from torchvision.utils import save_image
 
 
 class Tester:
@@ -49,12 +50,13 @@ class Tester:
                 mask = mask.to(self.device)
                 criterion = self.net(image)
 
-                for idx, img in enumerate([image[0], mask[0], criterion[0]]):
-                    subplot = fig.add_subplot(1, 3, idx + 1)
-                    subplot.imshow(img.cpu().numpy().transposse(1, 2, 0))
-                    subplot.set_xticks([])
-                    subplot.set_yticks([])
-
-                dir_name = os.path.join(self.test_dir, f"test_epoch{epoch}_step{step}.png")
-                plt.savefig(dir_name)
+                subplot = fig.add_subplot(epoch + 1, 3, epoch + 1)
+                subplot.imshow(
+                    [image[0].cpu().numpy(), mask[0].cpu().numpy(), torch.argmax(criterion[0], 0).cpu().numpy()])
+                subplot.set_xticks([])
+                subplot.set_yticks([])
                 print('[*] Saved sample images')
+        dir_name = os.path.join(self.test_dir, "test.png")
+        plt.savefig(dir_name)
+
+
