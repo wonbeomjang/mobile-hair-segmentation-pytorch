@@ -4,7 +4,7 @@ import os
 from glob import glob
 import torch
 from loss.loss import iou_loss
-from util.util import LambdaLR, AverageMeter
+from utils.util import LambdaLR, AverageMeter
 import matplotlib.pyplot as plt
 import numpy as np
 from torch.optim.adadelta import Adadelta

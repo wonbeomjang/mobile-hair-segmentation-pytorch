@@ -5,7 +5,7 @@ import numpy as np
 from glob import glob
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image
-
+from utils.custom_transfrom import UnNormalize
 
 class Tester:
     def __init__(self, config, dataloader):
@@ -44,12 +44,17 @@ class Tester:
         print(f"[*] Load Model from {model[-1]}: ")
 
     def test(self):
+        unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         for step, (image, mask) in enumerate(self.data_loader):
-            image = image.to(self.device)
+            image = unnormal(image.to(self.device))
             mask = mask.to(self.device).repeat_interleave(3, 1)
-            criterion = self.net(image)[:, 1, :, :].repeat_interleave(3, 0).unsqueeze(0)
-            torch.cat([image, criterion, mask])
+            result = self.net(image)
+            argmax = torch.argmax(result, dim=1).unsqueeze(dim=1)
+            result = result[:, 1, :, :].unsqueeze(dim=1)
+            result = result * argmax
+            result = result.repeat_interleave(3, 1)
+            torch.cat([image, result, mask])
 
-            save_image(torch.cat([image, criterion, mask]), os.path.join(self.sample_dir, f"{step}.png"))
+            save_image(torch.cat([image, result, mask]), os.path.join(self.sample_dir, f"{step}.png"))
             print('[*] Saved sample images')
 
