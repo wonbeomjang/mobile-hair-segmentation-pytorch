@@ -1,4 +1,4 @@
-from model.model import MobileHairNet
+from model.transfer_model import MobileHairNet
 from loss.loss import ImageGradientLoss
 import os
 from glob import glob

@@ -12,7 +12,6 @@ class ImageGradientLoss(_WeightedLoss):
     def forward(self, pred, gray_image):
         size = pred.size()
         pred = pred.argmax(1).view(size[0], 1, size[2], size[3]).float()
-        pred.argmax()
         gradient_tensor_x = torch.Tensor([[1.0, 0.0, -1.0],
                                           [2.0, 0.0, -2.0],
                                           [1.0, 0.0, -1.0]]).to(self.device).view((1, 1, 3, 3))
