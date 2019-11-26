@@ -23,8 +23,8 @@ parser.add_argument('--checkpoint_dir', default='checkpoints', help="path to sav
 parser.add_argument('--sample_dir', default='samples', help='folder to output images and model checkpoints')
 parser.add_argument('--workers', type=int, default=4, help='number of data loading workers')
 parser.add_argument('--mode', type=str, default='train', help='Trainer mode: train or test')
-parser.add_argument('--nf', type=int, default=32, help='The number of filter')
 parser.add_argument('--num_test', type=int, default=32, help='The number of test image')
+parser.add_argument('--transfer_learning', type=bool, default=False, help='whether use pretrained mobilenet v2')
 parser.add_argument('--gradient_loss_weight', type=int, default=0.5, help='The number of test image')
 
 def get_config():

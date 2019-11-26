@@ -1,4 +1,4 @@
-from model.transfer_model import MobileHairNet
+from model import transfer_model, model
 from loss.loss import ImageGradientLoss
 import os
 from glob import glob
@@ -31,6 +31,7 @@ class Trainer:
         self.sample_dir = config.sample_dir
         self.gradient_loss_weight = config.gradient_loss_weight
         self.decay_batch_size = config.decay_batch_size
+        self.transfer_learning = config.transfer_learning
 
         self.build_model()
         self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho, weight_decay=self.decay)
@@ -40,7 +41,10 @@ class Trainer:
                                                                                                      self.decay_batch_size).step)
 
     def build_model(self):
-        self.net = MobileHairNet().to(self.device)
+        if self.transfer_learning:
+            self.net = transfer_model.MobileHairNet().to(self.device)
+        else:
+            self.net = model.MobileHairNet().to(self.device)
         self.load_model()
 
     def load_model(self):

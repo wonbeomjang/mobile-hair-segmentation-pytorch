@@ -19,7 +19,7 @@ class _Layer_Depwise_Decode(nn.Module):
 
 
 class MobileHairNet(nn.Module):
-    def __init__(self, kernel_size=3, initialize=True):
+    def __init__(self, kernel_size=3, pretrained=True):
         super(MobileHairNet, self).__init__()
         mobilenet = mobilenet_v2(pretrained=True)
 #######################################################################################################################
@@ -29,9 +29,10 @@ class MobileHairNet(nn.Module):
 #######################################################################################################################
         self.encode_layer1 = nn.Sequential(*list(mobilenet.features)[:2])
         self.encode_layer2 = nn.Sequential(*list(mobilenet.features)[2:4])
-        self.encode_layer3 = nn.Sequential(*list(mobilenet.features)[4:6])
-        self.encode_layer4 = nn.Sequential(*list(mobilenet.features)[6:14])
-        self.encode_layer5 = nn.Sequential(*list(mobilenet.features)[5:7])
+        self.encode_layer3 = nn.Sequential(*list(mobilenet.features)[4:7])
+        self.encode_layer4 = nn.Sequential(*list(mobilenet.features)[7:14])
+        self.encode_layer5 = nn.Sequential(*list(mobilenet.features)[14:19])
+
 #######################################################################################################################
 #                                                                                                                     #
 #                                               DECODER                                                               #
@@ -39,7 +40,7 @@ class MobileHairNet(nn.Module):
 #######################################################################################################################
         self.decode_layer1 = nn.Upsample(scale_factor=2)
         self.decode_layer2 = nn.Sequential(
-            nn.Conv2d(in_channels=16, out_channels=64, kernel_size=1),
+            nn.Conv2d(in_channels=1280, out_channels=64, kernel_size=1),
             _Layer_Depwise_Decode(in_channel=64, out_channel=64, kernel_size=kernel_size),
             nn.Upsample(scale_factor=2)
         )
@@ -57,28 +58,23 @@ class MobileHairNet(nn.Module):
             _Layer_Depwise_Decode(in_channel=64, out_channel=64, kernel_size=kernel_size),
             nn.Conv2d(in_channels=64, out_channels=2, kernel_size=kernel_size, padding=1)
         )
-        self.encode_to_decoder4 = nn.Conv2d(in_channels=96, out_channels=1024, kernel_size=1, groups=16)
-        self.encode_to_decoder3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=1, groups=64)
+        self.encode_to_decoder4 = nn.Conv2d(in_channels=96, out_channels=1280, kernel_size=1, groups=16)
+        self.encode_to_decoder3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=1, groups=32)
         self.encode_to_decoder2 = nn.Conv2d(in_channels=24, out_channels=64, kernel_size=1, groups=8)
         self.encode_to_decoder1 = nn.Conv2d(in_channels=16, out_channels=64, kernel_size=1, groups=16)
 
         self.soft_max = nn.Softmax(dim=1)
 
-        if initialize:
+        if pretrained:
             self._init_weight()
 
     def forward(self, x):
-#connet encode 4-> decode 1, encode 3-> decode 2, encode 2-> decode 3, encode 1-> decode 4
+        #connet encode 4-> decode 1, encode 3-> decode 2, encode 2-> decode 3, encode 1-> decode 4
         encode_layer1 = self.encode_layer1(x)
-        print(encode_layer1.shape)
         encode_layer2 = self.encode_layer2(encode_layer1)
-        print(encode_layer2.shape)
         encode_layer3 = self.encode_layer3(encode_layer2)
-        print(encode_layer3.shape)
         encode_layer4 = self.encode_layer4(encode_layer3)
-        print(encode_layer4.shape)
         encode_layer5 = self.encode_layer5(encode_layer4)
-        print(encode_layer5.shape)
 
         encode_layer4 = self.encode_to_decoder4(encode_layer4)
         encode_layer3 = self.encode_to_decoder3(encode_layer3)
