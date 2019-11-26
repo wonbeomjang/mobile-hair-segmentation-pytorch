@@ -1,10 +1,10 @@
-from model.model import MobileHairNet
+from model.transfer_model import MobileHairNet
 from loss.loss import ImageGradientLoss
 import os
 from glob import glob
 import torch
 from loss.loss import iou_loss
-from util.util import LambdaLR, AverageMeter
+from utils.util import LambdaLR, AverageMeter
 import matplotlib.pyplot as plt
 import numpy as np
 from torch.optim.adadelta import Adadelta
