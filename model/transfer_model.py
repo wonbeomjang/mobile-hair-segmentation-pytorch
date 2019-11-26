@@ -58,10 +58,10 @@ class MobileHairNet(nn.Module):
             _Layer_Depwise_Decode(in_channel=64, out_channel=64, kernel_size=kernel_size),
             nn.Conv2d(in_channels=64, out_channels=2, kernel_size=kernel_size, padding=1)
         )
-        self.encode_to_decoder4 = nn.Conv2d(in_channels=96, out_channels=1280, kernel_size=1, groups=16)
-        self.encode_to_decoder3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=1, groups=32)
-        self.encode_to_decoder2 = nn.Conv2d(in_channels=24, out_channels=64, kernel_size=1, groups=8)
-        self.encode_to_decoder1 = nn.Conv2d(in_channels=16, out_channels=64, kernel_size=1, groups=16)
+        self.encode_to_decoder4 = nn.Conv2d(in_channels=96, out_channels=1280, kernel_size=1)
+        self.encode_to_decoder3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=1)
+        self.encode_to_decoder2 = nn.Conv2d(in_channels=24, out_channels=64, kernel_size=1)
+        self.encode_to_decoder1 = nn.Conv2d(in_channels=16, out_channels=64, kernel_size=1)
 
         self.soft_max = nn.Softmax(dim=1)
 
