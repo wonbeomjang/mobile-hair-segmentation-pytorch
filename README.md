@@ -32,6 +32,10 @@ run main
 ```
 python main.py
 ```
+if you want do transfer learning with model made of MobileNet V2 network
+```
+python main.py --transfer_learning=True
+```
 ``` python
 from src.train import Trainer
 from data.dataloader import get_loader
