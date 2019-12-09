@@ -8,7 +8,7 @@ So we borrowed the model structure from the following article.
 
 ## model architecture
 ![network_architecture](./image/network_architecture.PNG)   
-This model is based on MobileNet.  
+This model MobileNet + SegNet.  
 To do semantic segmentation they transform MobileNet like SegNet.
 And add additional loss function to capture fine hair texture.
 ## preparing datsets
