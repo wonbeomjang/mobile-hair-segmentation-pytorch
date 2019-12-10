@@ -8,13 +8,13 @@ So we borrowed the model structure from the following article.
 
 ## model architecture
 ![network_architecture](./image/network_architecture.PNG)   
-This model is based on MobileNet.  
+This model MobileNet + SegNet.  
 To do semantic segmentation they transform MobileNet like SegNet.
 And add additional loss function to capture fine hair texture.
 ## preparing datsets
 make directory like this
 ```
-data
+dataset
    |__ images
    |
    |__ masks
@@ -23,9 +23,23 @@ data
 expected image name  
 The name of the expected image pair is:  
 ```
- - data/images/1.jpg 
+ - dataset/images/1.jpg 
 | 
- - data/masks/1.jpg  
+ - dataset/masks/1.jpg  
+```
+
+```
+/dataset
+    /images
+        /1.jpg
+        /2.jpg
+        /3.jpg 
+         ...
+    /masks
+        /1.jpg
+        /2.jpg
+        /3.jpg 
+         ...
 ```
 ## how to train
 run main
