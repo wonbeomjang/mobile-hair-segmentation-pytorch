@@ -11,6 +11,12 @@ So we borrowed the model structure from the following article.
 This model MobileNet + SegNet.  
 To do semantic segmentation they transform MobileNet like SegNet.
 And add additional loss function to capture fine hair texture.
+
+## install requirements
+```bash
+pip install -r requirements.txt
+```
+
 ## preparing datsets
 make directory like this
 ```
@@ -59,6 +65,11 @@ config = get_config()
 data_loader = get_loader(config.data_path, config.batch_size, config.image_size,
                         shuffle=True, num_workers=int(config.workers))
 trainer = Trainer(config, data_loader)
+```
+
+make jit trace model
+```bash
+python to_jit_trace_model.py
 ```
 
 ## Overall result
