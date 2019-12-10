@@ -3,7 +3,7 @@ import argparse
 parser = argparse.ArgumentParser()
 
 
-parser.add_argument('--image_size', type=int, default=224, help='the height / width of the input image to network')
+parser.add_argument('--image_size', type=int, default=255, help='the height / width of the input image to network')
 parser.add_argument('--num_classes', type=int, default=2, help='number of model output channels')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 parser.add_argument('--test_batch_size', type=int, default=1, help='test batch size')
