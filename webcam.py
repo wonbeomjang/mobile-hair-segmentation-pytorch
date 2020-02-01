@@ -7,17 +7,18 @@ import numpy as np
 from glob import glob
 
 
-def get_mask(image, net, size = 224):
+def get_mask(image, net, size=224):
     image_h, image_w = image.shape[0], image.shape[1]
 
     down_size_image = cv2.resize(image, (size, size))
-    b, g, r = cv2.split(down_size_image)
-    down_size_image = cv2.merge([r,g,b])
+    down_size_image = cv2.cvtColor(down_size_image, cv2.COLOR_BGR2RGB)
     down_size_image = torch.from_numpy(down_size_image).float().div(255.0).unsqueeze(0)
     down_size_image = np.transpose(down_size_image, (0, 3, 1, 2)).to(device)
-    mask = net(down_size_image)
+    mask: torch.nn.Module = net(down_size_image)
 
-    mask = torch.squeeze(mask[:, 1, :, :])
+    # mask = torch.squeeze(mask[:, 1, :, :])
+    mask = mask.argmax(dim=1).squeeze()
+    print(mask.shape)
     mask_cv2 = mask.data.cpu().numpy() * 255
     mask_cv2 = mask_cv2.astype(np.uint8)
     mask_cv2 = cv2.resize(mask_cv2, (image_w, image_h))

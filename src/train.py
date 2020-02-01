@@ -30,15 +30,12 @@ class Trainer:
         self.sample_step = config.sample_step
         self.sample_dir = config.sample_dir
         self.gradient_loss_weight = config.gradient_loss_weight
-        self.decay_batch_size = config.decay_batch_size
+        self.decay_epoch = config.decay_epoch
         self.transfer_learning = config.transfer_learning
 
         self.build_model()
         self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho, weight_decay=self.decay)
-        self.lr_scheduler_discriminator = torch.optim.lr_scheduler.LambdaLR(self.optimizer, LambdaLR(self.num_epoch,
-                                                                                                     self.epoch,
-                                                                                                     len(self.data_loader),
-                                                                                                     self.decay_batch_size).step)
+        self.lr_scheduler_discriminator = torch.optim.lr_scheduler.StepLR(self.optimizer, self.decay_epoch)
 
     def build_model(self):
         if self.transfer_learning:
@@ -101,11 +98,11 @@ class Trainer:
                 iou = iou_loss(pred, mask)
 
                 # save sample images
-                if step % 10 == 0:
+                if step % 1 == 0:
                     print(f"Epoch: [{epoch}/{self.num_epoch}] | Step: [{step}/{self.image_len}] | "
                           f"Bce Loss: {bce_losses.avg:.4f} | Image Gradient Loss: {image_gradient_losses.avg:.4f} | "
                           f"IOU: {iou:.4f}")
-                if step % self.sample_step == 0:
+                if step % 1 == 0:
                     self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                     print('[*] Saved sample images')
 

@@ -4,12 +4,29 @@ import torch.utils.data
 import torchvision.transforms as transforms
 from PIL import Image
 import torchvision.transforms.functional as TF
+from random import random
 
 
 def transform(image, mask, image_size=224):
     resize = transforms.Resize(size=(image_size, image_size))
     image = resize(image)
     mask = resize(mask)
+
+    if random() > 0.5:
+        image = TF.vflip(image)
+        mask = TF.vflip(mask)
+
+    if random() > 0.5:
+        image = TF.hflip(image)
+        mask = TF.hflip(mask)
+
+    angle = random() * 12 - 6
+    image = TF.rotate(image, angle)
+    mask = TF.rotate(mask, angle)
+
+    pad_size = random() * image_size
+    image = TF.pad(image, pad_size, padding_mode='edge')
+    mask = TF.pad(mask, pad_size, padding_mode='edge')
 
     # Transform to tensor
     image = TF.to_tensor(image)
