@@ -6,7 +6,6 @@ import os
 import numpy as np
 from glob import glob
 
-
 def get_mask(image, net, size=224):
     image_h, image_w = image.shape[0], image.shape[1]
 
@@ -18,7 +17,6 @@ def get_mask(image, net, size=224):
 
     # mask = torch.squeeze(mask[:, 1, :, :])
     mask = mask.argmax(dim=1).squeeze()
-    print(mask.shape)
     mask_cv2 = mask.data.cpu().numpy() * 255
     mask_cv2 = mask_cv2.astype(np.uint8)
     mask_cv2 = cv2.resize(mask_cv2, (image_w, image_h))
@@ -37,7 +35,7 @@ def alpha_image(image, mask, alpha=0.1):
 
 if __name__ == "__main__":
     config = get_config()
-    pretrained = glob(os.path.join(config.checkpoint_dir, f"MobileHairNet_epoch-{config.epoch}.pth"))[-1]
+    pretrained = glob(os.path.join("param", f"MobileHairNet.pth"))[-1]
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = MobileHairNet().to(device)
     net.load_state_dict(torch.load(pretrained, map_location=device))
@@ -49,6 +47,7 @@ if __name__ == "__main__":
     while (True):
         # ret : frame capture결과(boolean)
         # frame : Capture한 frame
+
         ret, image = cam.read()
 
         if (ret):

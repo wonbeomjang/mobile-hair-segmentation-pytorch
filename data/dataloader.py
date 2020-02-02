@@ -17,27 +17,27 @@ import random
 
 
 def transform(image, mask, image_size=224):
-    # num_pad = int(random.random() * image_size)
-    # image = TF.pad(image, num_pad, fill=(int(random.random() * 255), int(random.random() * 255), int(random.random() * 255)))
-    # mask = TF.pad(mask, num_pad)
-
     # Resize
-    resize = transforms.Resize(size=(image_size, image_size))
+    resized_num = int(random.random() * image_size)
+    resize = transforms.Resize(size=(image_size + resized_num, image_size + resized_num))
     image = resize(image)
     mask = resize(mask)
+
+    # num_pad = int(random.random() * image_size)
+    # image = TF.pad(image, num_pad, padding_mode='edge')
+    # mask = TF.pad(mask, num_pad)
 
     # # Random crop
     # i, j, h, w = transforms.RandomCrop.get_params(
     #     image, output_size=(image_size, image_size))
     # image = TF.crop(image, i, j, h, w)
     # mask = TF.crop(mask, i, j, h, w)
-    #
+
+
     # # Random horizontal flipping
     # if random.random() > 0.5:
     #     image = TF.hflip(image)
     #     mask = TF.hflip(mask)
-    #
-    #
     #
     # # Random vertical flipping
     # if random.random() > 0.5:

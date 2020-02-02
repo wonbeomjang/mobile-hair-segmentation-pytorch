@@ -48,6 +48,8 @@ The name of the expected image pair is:
          ...
 ```
 ## how to train
+after 200 epoch, add other commented augmentation and remove resize  
+(dataloader/dataloader.py)  
 run main
 ```
 python main.py
@@ -66,10 +68,9 @@ data_loader = get_loader(config.data_path, config.batch_size, config.image_size,
                         shuffle=True, num_workers=int(config.workers))
 trainer = Trainer(config, data_loader)
 ```
-
-make jit trace model
+## Test
 ```bash
-python to_jit_trace_model.py
+python webcam.py
 ```
 
 ## Overall result
