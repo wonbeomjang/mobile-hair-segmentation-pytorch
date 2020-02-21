@@ -44,6 +44,10 @@ def transform(image, mask, image_size=224):
     #     image = TF.vflip(image)
     #     mask = TF.vflip(mask)
 
+    resize = transforms.Resize(size=(image_size, image_size))
+    image = resize(image)
+    mask = resize(mask)
+
     # Make gray scale image
     gray_image = TF.to_grayscale(image)
 
@@ -80,6 +84,7 @@ class Dataset(torch.utils.data.Dataset):
         mask = Image.open(os.path.join(self.data_folder, 'masks', self.image_name[index]))
 
         image, gray_image, mask = transform(image, mask)
+
 
         return image, gray_image, mask
 
