@@ -74,7 +74,6 @@ python webcam.py
 ```
 
 ## Overall result
-it use argmax function to get mask  
 
 ![network_architecture](./image/sample_image.PNG)
 ![network_architecture](./image/webcam.gif)
