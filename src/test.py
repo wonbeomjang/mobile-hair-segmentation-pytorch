@@ -1,5 +1,5 @@
 import torch
-from model.model import MobileHairNet
+from models.modelv1 import MobileHairNet
 import os
 import numpy as np
 from glob import glob
@@ -18,30 +18,24 @@ class Tester:
         self.num_test = config.num_test
         self.sample_dir = config.sample_dir
         self.epoch = config.epoch
+        self.checkpoint_dir = config.checkpoint_dir
         self.build_model()
 
     def build_model(self):
         self.net = MobileHairNet()
         self.net.to(self.device)
         self.load_model()
-
+        
     def load_model(self):
-        print("[*] Load checkpoint in ", str(self.model_path))
-        if not os.path.exists(self.model_path):
-            os.makedirs(self.model_path)
-
-        if not os.listdir(self.model_path):
-            print("[!] No checkpoint in ", str(self.model_path))
-            return
-
-        model_path = os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch}.pth")
-        model = glob(model_path)
-        model.sort()
-        if not model:
-            raise Exception(f"[!] No Checkpoint in {model_path}")
-
-        self.net.load_state_dict(torch.load(model[-1], map_location=self.device))
-        print(f"[*] Load Model from {model[-1]}: ")
+        save_info = torch.load(f'{self.checkpoint_dir}/last.pth')
+        # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
+        
+        self.epoch = save_info['epoch']
+        self.net = save_info['model']
+        self.net.load_state_dict(save_info['state_dict'], map_location=self.device)
+        self.optimizer = save_info['optimizer']
+        
+        print(f"[*] Load Model from {self.model_path}")
 
     def test(self):
         unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))

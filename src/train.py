@@ -1,16 +1,17 @@
-from models.modelv1 import MobileHairNet
-from models.modelv2 import MobileHairNetV2
-from loss.loss import ImageGradientLoss
 import os
 from glob import glob
-import torch
-from loss.loss import iou_loss
-from utils.util import LambdaLR, AverageMeter
-import matplotlib.pyplot as plt
-import numpy as np
-from torch.optim.adadelta import Adadelta
-import torch.nn as nn
 
+import torch
+import torch.nn as nn
+import numpy as np
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+from torch.optim.adadelta import Adadelta
+
+from models.modelv1 import MobileHairNet
+from models.modelv2 import MobileHairNetV2
+from loss.loss import ImageGradientLoss, iou_loss
+from utils.util import LambdaLR, AverageMeter
 
 class Trainer:
     def __init__(self, config, dataloader):
@@ -68,7 +69,9 @@ class Trainer:
         for epoch in range(self.epoch, self.num_epoch):
             bce_losses.reset()
             image_gradient_losses.reset()
-            for step, (image, gray_image, mask) in enumerate(self.data_loader):
+            
+            pbar = tqdm(enumerate(self.data_loader))
+            for step, (image, gray_image, mask) in pbar:
                 image = image.to(self.device)
                 mask = mask.to(self.device)
                 gray_image = gray_image.to(self.device)
@@ -94,16 +97,15 @@ class Trainer:
                 iou = iou_loss(pred, mask)
 
                 # save sample images
-                if step % 50 == 0:
-                    print(f"Epoch: [{epoch}/{self.num_epoch}] | Step: [{step}/{self.image_len}] | "
-                          f"Bce Loss: {bce_losses.avg:.4f} | Image Gradient Loss: {image_gradient_losses.avg:.4f} | "
-                          f"IOU: {iou:.4f}")
+                pbar.set_description(f"Epoch: [{epoch}/{self.num_epoch}] | Bce Loss: {bce_losses.avg:.4f} | "
+                    f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou:.4f}")
+                
                 if step % self.sample_step == 0:
                     self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                     print('[*] Saved sample images')
             
             save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
-            torch.save(save_info, f'{self.checkpoint_dir}/{epoch}.pth')
+            torch.save(save_info, f'{self.checkpoint_dir}/last.pth')
 
     def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
         data = [real_img, real_mask, prediction]
