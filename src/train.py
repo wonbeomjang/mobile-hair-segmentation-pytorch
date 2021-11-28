@@ -1,4 +1,5 @@
-from model import transfer_model, model
+from models.modelv1 import MobileHairNet
+from models.modelv2 import MobileHairNetV2
 from loss.loss import ImageGradientLoss
 import os
 from glob import glob
@@ -16,52 +17,47 @@ class Trainer:
         self.batch_size = config.batch_size
         self.config = config
         self.lr = config.lr
-        self.epoch = config.epoch
+        self.epoch = 0
         self.num_epoch = config.num_epoch
         self.checkpoint_dir = config.checkpoint_dir
-        self.model_path = config.checkpoint_dir
+        self.model_path = config.model_path
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.data_loader = dataloader
         self.image_len = len(dataloader)
         self.num_classes = config.num_classes
-        self.eps = config.eps
-        self.rho = config.rho
-        self.decay = config.decay
         self.sample_step = config.sample_step
         self.sample_dir = config.sample_dir
         self.gradient_loss_weight = config.gradient_loss_weight
-        self.decay_epoch = config.decay_epoch
-        self.transfer_learning = config.transfer_learning
+        self.model_version = config.model_version
 
         self.build_model()
-        self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho, weight_decay=self.decay)
-        self.lr_scheduler_discriminator = torch.optim.lr_scheduler.StepLR(self.optimizer, self.decay_epoch)
+        self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=config.eps, rho=config.rho, weight_decay=config.decay)
 
     def build_model(self):
-        if self.transfer_learning:
-            self.net = transfer_model.MobileHairNet().to(self.device)
+        if self.model_version == 1:
+            self.net = MobileHairNet().to(self.device)
+        elif self.model_version == 2:
+            self.net = MobileHairNetV2().to(self.device)
+            
         else:
-            self.net = model.MobileHairNet().to(self.device)
+            raise Exception('[!] Unexpected model version')
+            
         self.load_model()
 
     def load_model(self):
-        print("[*] Load checkpoint in ", str(self.model_path))
-        if not os.path.exists(self.model_path):
-            os.makedirs(self.model_path)
-
-        if not os.listdir(self.model_path):
-            print("[!] No checkpoint in ", str(self.model_path))
+        
+        if not self.model_path:
             return
-
-        model_path = os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch-1}.pth")
-        model = glob(model_path)
-        model.sort()
-        if not model:
-            print(f"[!] No Checkpoint in {model_path}")
-            return
-
-        self.net.load_state_dict(torch.load(model[-1], map_location=self.device))
-        print(f"[*] Load Model from {model[-1]}: ")
+        
+        save_info = torch.load(self.model_path)
+        # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
+        
+        self.epoch = save_info['epoch']
+        self.net = save_info['model']
+        self.net.load_state_dict(save_info['state_dict'], map_location=self.device)
+        self.optimizer = save_info['optimizer']
+        
+        print(f"[*] Load Model from {self.model_path}")
 
     def train(self):
         bce_losses = AverageMeter()
@@ -105,8 +101,9 @@ class Trainer:
                 if step % self.sample_step == 0:
                     self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                     print('[*] Saved sample images')
-
-            torch.save(self.net.state_dict(), f'{self.checkpoint_dir}/MobileHairNet_epoch-{epoch}.pth')
+            
+            save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
+            torch.save(save_info, f'{self.checkpoint_dir}/{epoch}.pth')
 
     def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
         data = [real_img, real_mask, prediction]
