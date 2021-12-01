@@ -10,11 +10,12 @@ from torch.optim.adadelta import Adadelta
 
 from models.modelv1 import MobileHairNet
 from models.modelv2 import MobileHairNetV2
+from models.quantization import QuantizableMobileHairNetV2
 from loss.loss import ImageGradientLoss, iou_loss
 from utils.util import LambdaLR, AverageMeter
 
 class Trainer:
-    def __init__(self, config, dataloader):
+    def __init__(self, config, dataloader, val_loader=None):
         self.batch_size = config.batch_size
         self.config = config
         self.lr = config.lr
@@ -24,12 +25,14 @@ class Trainer:
         self.model_path = config.model_path
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.data_loader = dataloader
+        self.val_loader = val_loader
         self.image_len = len(dataloader)
         self.num_classes = config.num_classes
         self.sample_step = config.sample_step
         self.sample_dir = config.sample_dir
         self.gradient_loss_weight = config.gradient_loss_weight
         self.model_version = config.model_version
+        self.quantize = config.quantize
 
         self.build_model()
         self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=config.eps, rho=config.rho, weight_decay=config.decay)
@@ -38,7 +41,10 @@ class Trainer:
         if self.model_version == 1:
             self.net = MobileHairNet().to(self.device)
         elif self.model_version == 2:
-            self.net = MobileHairNetV2().to(self.device)
+            if self.quantize:
+                self.net = QuantizableMobileHairNetV2().to(self.device)
+            else:
+                self.net = MobileHairNetV2().to(self.device)
             
         else:
             raise Exception('[!] Unexpected model version')
@@ -46,7 +52,6 @@ class Trainer:
         self.load_model()
 
     def load_model(self):
-        
         if not self.model_path:
             return
         
@@ -61,52 +66,112 @@ class Trainer:
         print(f"[*] Load Model from {self.model_path}")
 
     def train(self):
-        bce_losses = AverageMeter()
-        image_gradient_losses = AverageMeter()
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
 
         for epoch in range(self.epoch, self.num_epoch):
-            bce_losses.reset()
-            image_gradient_losses.reset()
+            self._train_one_epoch(epoch, image_gradient_criterion, bce_criterion)
+            if self.val_loader:
+                iou, loss = self.val(image_gradient_criterion, bce_criterion)
+    
+    def quantize(self):
+        if not self.quantize:
+            return
+        
+        image_gradient_criterion = ImageGradientLoss().to(self.device)
+        bce_criterion = nn.CrossEntropyLoss().to(self.device)
+        
+        self.net.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+        self.net.fuse_model()
+        self.net = torch.quantization.prepare_qat(self.net)
+        
+        self._train_one_epoch(0, image_gradient_criterion, bce_criterion)
+        
+        self.net = self.net.eval().to('cpu')
+        torch.quantization.convert(self.net, inplace=True)
+        
+        save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': 0}
+        torch.save(save_info, f'{self.checkpoint_dir}/quantized.pth')
+
+                
+    def _train_one_epoch(self, epoch, image_gradient_criterion, bce_criterion):
+        bce_losses = AverageMeter()
+        image_gradient_losses = AverageMeter()
+        iou_avg = AverageMeter()
+        pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
+        for step, (image, gray_image, mask) in pbar:
+            image = image.to(self.device)
+            mask = mask.to(self.device)
+            gray_image = gray_image.to(self.device)
+
+            pred = self.net(image)
+
+            pred_flat = pred.permute(0, 2, 3, 1).contiguous().view(-1, self.num_classes)
+            mask_flat = mask.squeeze(1).view(-1).long()
+
+            # preds_flat.shape (N*224*224, 2)
+            # masks_flat.shape (N*224*224, 1)
+            image_gradient_loss = image_gradient_criterion(pred, gray_image)
+            bce_loss = bce_criterion(pred_flat, mask_flat)
+
+            loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
             
-            pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
+            iou = iou_loss(pred, mask)
+
+            bce_losses.update(bce_loss.item(), self.batch_size)
+            image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
+            iou_avg.update(iou)
+            # save sample images
+            pbar.set_description(f"Epoch: [{epoch}/{self.num_epoch}] | Bce Loss: {bce_losses.avg:.4f} | "
+                f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou_avg.avg:.4f}")
+            
+            if step % self.sample_step == 0:
+                self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
+                # print('[*] Saved sample images')
+        
+        save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
+        torch.save(save_info, f'{self.checkpoint_dir}/last.pth')
+        
+    def val(self, image_gradient_criterion, bce_criterion):
+        self.net = self.net.eval()
+        with torch.no_grad():
+            bce_losses = AverageMeter()
+            image_gradient_losses = AverageMeter()
+            iou_avg = AverageMeter()
+            pbar = tqdm(enumerate(self.val_loader), total=len(self.val_loader))
+            
             for step, (image, gray_image, mask) in pbar:
                 image = image.to(self.device)
                 mask = mask.to(self.device)
                 gray_image = gray_image.to(self.device)
-
+    
                 pred = self.net(image)
-
+    
                 pred_flat = pred.permute(0, 2, 3, 1).contiguous().view(-1, self.num_classes)
                 mask_flat = mask.squeeze(1).view(-1).long()
-
+    
                 # preds_flat.shape (N*224*224, 2)
                 # masks_flat.shape (N*224*224, 1)
                 image_gradient_loss = image_gradient_criterion(pred, gray_image)
                 bce_loss = bce_criterion(pred_flat, mask_flat)
-
+    
                 loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
+                iou = iou_loss(pred, mask)
+                
                 bce_losses.update(bce_loss.item(), self.batch_size)
                 image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
-                iou = iou_loss(pred, mask)
-
-                # save sample images
-                pbar.set_description(f"Epoch: [{epoch}/{self.num_epoch}] | Bce Loss: {bce_losses.avg:.4f} | "
+                iou_avg.update(iou)
+    
+                pbar.set_description(f"Validate... Bce Loss: {bce_losses.avg:.4f} | "
                     f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou:.4f}")
-                
-                if step % self.sample_step == 0:
-                    self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
-                    print('[*] Saved sample images')
             
-            save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
-            torch.save(save_info, f'{self.checkpoint_dir}/last.pth')
-
+        self.net = self.net.train()
+        return iou, loss.data
+        
     def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
         data = [real_img, real_mask, prediction]
         names = ["Image", "Mask", "Prediction"]
