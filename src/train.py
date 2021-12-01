@@ -85,10 +85,11 @@ class Trainer:
         self.net.fuse_model()
         self.net = torch.quantization.prepare_qat(self.net)
         
-        self._train_one_epoch(0, image_gradient_criterion, bce_criterion)
+        # self._train_one_epoch(0, image_gradient_criterion, bce_criterion)
         
         self.net = self.net.eval().to('cpu')
         torch.quantization.convert(self.net, inplace=True)
+        iou, loss = self.val(image_gradient_criterion, bce_criterion)
         
         save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': 0}
         torch.save(save_info, f'{self.checkpoint_dir}/quantized.pth')

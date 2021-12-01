@@ -26,10 +26,11 @@ def main(config):
 
     # cudnn.benchmark = True
 
-    data_loader = get_loader(config.data_path, config.batch_size, config.image_size,
+    data_loader, val_loader = get_loader(config.data_path, config.batch_size, config.image_size,
                              shuffle=True, num_workers=int(config.workers))
+                             
 
-    trainer = Trainer(config, data_loader)
+    trainer = Trainer(config, data_loader, val_loader)
     trainer.train()
     
     if config.quantize:
