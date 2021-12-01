@@ -74,7 +74,7 @@ class Trainer:
             if self.val_loader:
                 iou, loss = self.val(image_gradient_criterion, bce_criterion)
     
-    def quantize(self):
+    def quantize_model(self):
         if not self.quantize:
             return
         

@@ -23,7 +23,7 @@ parser.add_argument('--sample_dir', default='samples', help='folder to output im
 parser.add_argument('--workers', type=int, default=4, help='number of data loading workers')
 parser.add_argument('--mode', type=str, default='train', help='Trainer mode: train or test')
 parser.add_argument('--num_test', type=int, default=32, help='The number of test image')
-parser.add_argument('--model_version', type=int, default=1, help='MobileHairNet version')
+parser.add_argument('--model_version', type=int, default=2, help='MobileHairNet version')
 parser.add_argument('--gradient_loss_weight', type=int, default=0.5, help='The number of test image')
 parser.add_argument('--quantize', nargs='?', const=True, default=False, help='load and train quantizable model')
 

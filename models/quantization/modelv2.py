@@ -28,7 +28,7 @@ class QuantizableLayerDepwiseDecode(nn.Module):
 
 class QuantizableMobileHairNetV2(MobileHairNetV2):
     def __init__(self, decode_block=QuantizableLayerDepwiseDecode, *args, **kwargs):
-        super(QuantizableMobileHairNet, self).__init__()
+        super(QuantizableMobileHairNetV2, self).__init__()
         
         self.mobilenet = mobilenet_v2()
         self.quant = torch.quantization.QuantStub()
@@ -36,6 +36,7 @@ class QuantizableMobileHairNetV2(MobileHairNetV2):
         
         _replace_relu(self.mobilenet)
         self.make_layers()
+        self._init_weight()
         
     def forward(self, x):
         x = self.quant(x)
