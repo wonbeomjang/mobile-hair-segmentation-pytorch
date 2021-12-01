@@ -10,7 +10,7 @@ from torch.optim.adadelta import Adadelta
 
 from models.modelv1 import MobileHairNet
 from models.modelv2 import MobileHairNetV2
-from models.quantization import QuantizableMobileHairNetV2
+from models.quantization.modelv2 import QuantizableMobileHairNetV2
 from loss.loss import ImageGradientLoss, iou_loss
 from utils.util import LambdaLR, AverageMeter
 
