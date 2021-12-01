@@ -89,8 +89,11 @@ class Trainer:
         
         self.net = self.net.eval().to('cpu')
         torch.quantization.convert(self.net, inplace=True)
-        iou, loss = self.val(image_gradient_criterion, bce_criterion)
         
+        self.device = 'cpu'
+        iou, loss = self.val(image_gradient_criterion, bce_criterion)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
         save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': 0}
         torch.save(save_info, f'{self.checkpoint_dir}/quantized.pth')
 
