@@ -1,4 +1,5 @@
 import os
+import time
 from glob import glob
 
 import torch
@@ -33,6 +34,7 @@ class Trainer:
         self.gradient_loss_weight = config.gradient_loss_weight
         self.model_version = config.model_version
         self.quantize = config.quantize
+        self.resume = config.resume
 
         self.build_model()
         self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=config.eps, rho=config.rho, weight_decay=config.decay)
@@ -52,15 +54,17 @@ class Trainer:
         self.load_model()
 
     def load_model(self):
-        if not self.model_path:
+        if not self.model_path and not self.resume:
             return
         
-        save_info = torch.load(self.model_path)
+        ckpt = os.path.join(self.checkpoint_dir, 'last.pt') if self.resume else self.model_path 
+
+        save_info = torch.load(ckpt, map_location=self.device)
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
         
-        self.epoch = save_info['epoch']
+        self.epoch = save_info['epoch'] + 1
         self.net = save_info['model']
-        self.net.load_state_dict(save_info['state_dict'], map_location=self.device)
+        self.net.load_state_dict(save_info['state_dict'])
         self.optimizer = save_info['optimizer']
         
         print(f"[*] Load Model from {self.model_path}")
@@ -81,11 +85,17 @@ class Trainer:
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
         
+        self.device = 'cpu'
+        self.net = self.net.to(self.device)
+        self.val(image_gradient_criterion, bce_criterion)
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.net = self.net.to(self.device)
+
         self.net.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
         self.net.fuse_model()
         self.net = torch.quantization.prepare_qat(self.net)
         
-        # self._train_one_epoch(0, image_gradient_criterion, bce_criterion)
+        self._train_one_epoch(0, image_gradient_criterion, bce_criterion, quantize=True)
         
         self.net = self.net.eval().to('cpu')
         torch.quantization.convert(self.net, inplace=True)
@@ -95,10 +105,10 @@ class Trainer:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': 0}
-        torch.save(save_info, f'{self.checkpoint_dir}/quantized.pth')
+        torch.save(save_info, f'{self.checkpoint_dir}/quantized.pt')
 
                 
-    def _train_one_epoch(self, epoch, image_gradient_criterion, bce_criterion):
+    def _train_one_epoch(self, epoch, image_gradient_criterion, bce_criterion, quantize=False):
         bce_losses = AverageMeter()
         image_gradient_losses = AverageMeter()
         iou_avg = AverageMeter()
@@ -136,15 +146,19 @@ class Trainer:
             if step % self.sample_step == 0:
                 self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                 # print('[*] Saved sample images')
-        
-        save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
-        torch.save(save_info, f'{self.checkpoint_dir}/last.pth')
+        if not quantize:
+            save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
+            torch.save(save_info, f'{self.checkpoint_dir}/last.pt')
+
         
     def val(self, image_gradient_criterion, bce_criterion):
         self.net = self.net.eval()
+        torch.save(self.net.state_dict(), "tmp.pt")
+        model_size = "%.2f MB" %(os.path.getsize("tmp.pt") / 1e6)
         with torch.no_grad():
             bce_losses = AverageMeter()
             image_gradient_losses = AverageMeter()
+            inference_avg = AverageMeter()
             iou_avg = AverageMeter()
             pbar = tqdm(enumerate(self.val_loader), total=len(self.val_loader))
             
@@ -152,9 +166,11 @@ class Trainer:
                 image = image.to(self.device)
                 mask = mask.to(self.device)
                 gray_image = gray_image.to(self.device)
-    
+
+                cur = time.time()
                 pred = self.net(image)
-    
+                inference_avg.update(time.time() - cur)
+
                 pred_flat = pred.permute(0, 2, 3, 1).contiguous().view(-1, self.num_classes)
                 mask_flat = mask.squeeze(1).view(-1).long()
     
@@ -171,8 +187,10 @@ class Trainer:
                 iou_avg.update(iou)
     
                 pbar.set_description(f"Validate... Bce Loss: {bce_losses.avg:.4f} | "
-                    f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou:.4f}")
-            
+                        f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou:.4f} | "
+                        f"Model Size: {model_size} | Infernece Speed: {inference_avg.avg:.4f}")
+        
+        os.remove("tmp.pt")
         self.net = self.net.train()
         return iou, 0
         
