@@ -66,7 +66,7 @@ class QuantizableMobileHairNetV2(MobileHairNetV2):
         decode_layer4 = self.f_add.add(self.decode_layer4(decode_layer3), encode_layer1)
         decode_layer5 = self.decode_layer5(decode_layer4)
 
-        out = self.soft_max(decode_layer5)
+        out = decode_layer5
         return out
         
     def fuse_model(self) -> None:

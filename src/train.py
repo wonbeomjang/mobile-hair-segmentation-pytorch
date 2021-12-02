@@ -160,21 +160,21 @@ class Trainer:
     
                 # preds_flat.shape (N*224*224, 2)
                 # masks_flat.shape (N*224*224, 1)
-                image_gradient_loss = image_gradient_criterion(pred, gray_image)
-                bce_loss = bce_criterion(pred_flat, mask_flat)
+                #image_gradient_loss = image_gradient_criterion(pred, gray_image)
+                #bce_loss = bce_criterion(pred_flat, mask_flat)
     
-                loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
+                #loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
                 iou = iou_loss(pred, mask)
                 
-                bce_losses.update(bce_loss.item(), self.batch_size)
-                image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
+                #bce_losses.update(bce_loss.item(), self.batch_size)
+                #image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
                 iou_avg.update(iou)
     
                 pbar.set_description(f"Validate... Bce Loss: {bce_losses.avg:.4f} | "
                     f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou:.4f}")
             
         self.net = self.net.train()
-        return iou, loss.data
+        return iou, 0
         
     def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
         data = [real_img, real_mask, prediction]
