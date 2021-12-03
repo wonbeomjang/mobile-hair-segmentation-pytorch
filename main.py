@@ -34,7 +34,7 @@ def main(config):
     trainer.train()
     
     #if config.quantize:
-    #    trainer.quantize_model()
+    #    net = trainer.quantize_model()
 
     test_loader = data.test_loader.get_loader(config.test_data_path, config.test_batch_size, config.image_size,
                                               shuffle=None, num_workers=int(config.workers))

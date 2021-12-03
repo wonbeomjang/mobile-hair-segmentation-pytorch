@@ -6,7 +6,8 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image
 from utils.custom_transfrom import UnNormalize
-from torchvision.models.quantization.utils import quantize_model
+from utils.util import quantize_model
+from models.quantization.modelv2 import QuantizableMobileHairNetV2
 
 class Tester:
     def __init__(self, config, dataloader):
@@ -25,7 +26,6 @@ class Tester:
         self.load_model()
         
     def load_model(self):
-        print(self.quantize)
         ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/last.pt'
         print(f'[*] Load Model from {ckpt}')
         save_info = torch.load(ckpt, map_location=self.device)
@@ -34,12 +34,18 @@ class Tester:
         self.epoch = save_info['epoch']
         self.net = save_info['model']
         self.optimizer = save_info['optimizer']
-        print(self.net)
 
-        #if self.quantize:
-        #    quantize_model(self.net, "fbgemm")
+        if self.quantize:
+            self.net = QuantizableMobileHairNetV2()
+            self.net = quantize_model(self.net, 'fbgemm')
 
-    def test(self):
+            self.net.load_state_dict(save_info['state_dict'])
+        
+
+    def test(self, net=None):
+        if net:
+            self.net = net
+
         unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
         for step, (image, mask) in pbar:

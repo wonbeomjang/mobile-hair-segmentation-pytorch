@@ -1,3 +1,7 @@
+import torch
+from torch import nn
+import torch.ao.quantization
+
 class LambdaLR:
     def __init__(self, n_epoch, offset, total_batch_size, decay_batch_size):
         self.n_epoch = n_epoch
@@ -26,3 +30,12 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+
+
+def quantize_model(net, backend):
+    net.qconfig = torch.quantization.get_default_qat_qconfig(backend)
+    net.fuse_model()
+    net = torch.quantization.prepare_qat(net)
+    torch.quantization.convert(net, inplace=True)
+
+    return net

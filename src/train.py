@@ -106,8 +106,9 @@ class Trainer:
         iou, loss = self.val(image_gradient_criterion, bce_criterion)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        save_info = {'model': self.net, 'optimizer' : self.optimizer.state_dict(), 'epoch': 0}
+        save_info = {'model': self.net, 'epoch': 0, 'state_dict': self.net.state_dict(), 'optimizer': self.optimizer.state_dict()}
         torch.save(save_info, f'{self.checkpoint_dir}/quantized.pt')
+        return self.net
 
                 
     def _train_one_epoch(self, epoch, image_gradient_criterion, bce_criterion, quantize=False):
@@ -149,9 +150,10 @@ class Trainer:
                 self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                 # print('[*] Saved sample images')
         if not quantize:
-            save_info = {'model': self.net, 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
+            save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
             torch.save(save_info, f'{self.checkpoint_dir}/last.pt')
-        
+
+
     def val(self, image_gradient_criterion, bce_criterion):
         self.net = self.net.eval()
         torch.save(self.net.state_dict(), "tmp.pt")
