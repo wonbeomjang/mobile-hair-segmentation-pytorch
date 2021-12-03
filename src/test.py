@@ -8,6 +8,7 @@ from torchvision.utils import save_image
 from utils.custom_transfrom import UnNormalize
 from utils.util import quantize_model
 from models.quantization.modelv2 import QuantizableMobileHairNetV2
+from loss.loss import iou_loss
 
 class Tester:
     def __init__(self, config, dataloader):
@@ -31,9 +32,7 @@ class Tester:
         save_info = torch.load(ckpt, map_location=self.device)
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
          
-        self.epoch = save_info['epoch']
         self.net = save_info['model']
-        self.optimizer = save_info['optimizer']
 
         if self.quantize:
             self.net = QuantizableMobileHairNetV2()
@@ -44,19 +43,24 @@ class Tester:
 
     def test(self, net=None):
         if net:
-            self.net = net
+            self.net = neti
 
         unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
         for step, (image, mask) in pbar:
             image = unnormal(image.to(self.device))
-            mask = mask.to(self.device).repeat_interleave(3, 1)
             result = self.net(image)
+
+            mask = mask.to(self.device)
+            pbar.set_description(f'IOU: {iou_loss(result, mask):.4f}')
+
+            mask = mask.repeat_interleave(3, 1)
             argmax = torch.argmax(result, dim=1).unsqueeze(dim=1)
             result = result[:, 1, :, :].unsqueeze(dim=1)
             result = result * argmax
             result = result.repeat_interleave(3, 1)
             torch.cat([image, result, mask])
+
 
             save_image(torch.cat([image, result, mask]), os.path.join(self.sample_dir, f"{step}.png"))
 

@@ -37,5 +37,6 @@ def quantize_model(net, backend):
     net.fuse_model()
     net = torch.quantization.prepare_qat(net)
     torch.quantization.convert(net, inplace=True)
+    net = net.eval()
 
     return net
