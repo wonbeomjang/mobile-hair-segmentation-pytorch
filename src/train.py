@@ -66,6 +66,7 @@ class Trainer:
         self.epoch = save_info['epoch'] + 1
         self.net = save_info['model']
         self.optimizer = save_info['optimizer']
+        self.net.load_state_dict(save_info['state_dict'])
         
         print(f"[*] Load Model from {ckpt}")
 
