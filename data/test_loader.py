@@ -12,21 +12,21 @@ def transform(image, mask, image_size=224):
     image = resize(image)
     mask = resize(mask)
 
-    if random() > 0.5:
-        image = TF.vflip(image)
-        mask = TF.vflip(mask)
+    # if random() > 0.5:
+    #     image = TF.vflip(image)
+    #     mask = TF.vflip(mask)
 
-    if random() > 0.5:
-        image = TF.hflip(image)
-        mask = TF.hflip(mask)
+    # if random() > 0.5:
+    #     image = TF.hflip(image)
+    #     mask = TF.hflip(mask)
 
-    angle = random() * 12 - 6
-    image = TF.rotate(image, angle)
-    mask = TF.rotate(mask, angle)
+    # angle = random() * 12 - 6
+    # image = TF.rotate(image, angle)
+    # mask = TF.rotate(mask, angle)
 
-    pad_size = random() * image_size
-    image = TF.pad(image, pad_size, padding_mode='edge')
-    mask = TF.pad(mask, pad_size, padding_mode='edge')
+    # pad_size = random() * image_size
+    # image = TF.pad(image, pad_size, padding_mode='edge')
+    # mask = TF.pad(mask, pad_size, padding_mode='edge')
 
     # Transform to tensor
     image = TF.to_tensor(image)
