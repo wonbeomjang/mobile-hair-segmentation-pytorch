@@ -2,9 +2,11 @@ import torch
 import os
 import numpy as np
 from glob import glob
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image
 from utils.custom_transfrom import UnNormalize
+from torchvision.models.quantization.utils import quantize_model
 
 class Tester:
     def __init__(self, config, dataloader):
@@ -18,22 +20,29 @@ class Tester:
         self.sample_dir = config.sample_dir
         self.checkpoint_dir = config.checkpoint_dir
         self.quantize = config.quantize
+        if self.quantize:
+            self.device = torch.device('cpu')
         self.load_model()
         
     def load_model(self):
-        save_info = torch.load(f'{self.checkpoint_dir}/quantized.pt', map_location=self.device) if self.quantize else torch.load(f'{self.checkpoint_dir}/last.pt', map_location=self.device)
+        print(self.quantize)
+        ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/last.pt'
+        print(f'[*] Load Model from {ckpt}')
+        save_info = torch.load(ckpt, map_location=self.device)
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
-        
+         
         self.epoch = save_info['epoch']
         self.net = save_info['model']
-        self.net.load_state_dict(save_info['state_dict'])
         self.optimizer = save_info['optimizer']
-        
-        print(f"[*] Load Model from {self.model_path}")
+        print(self.net)
+
+        #if self.quantize:
+        #    quantize_model(self.net, "fbgemm")
 
     def test(self):
         unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-        for step, (image, mask) in enumerate(self.data_loader):
+        pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
+        for step, (image, mask) in pbar:
             image = unnormal(image.to(self.device))
             mask = mask.to(self.device).repeat_interleave(3, 1)
             result = self.net(image)
@@ -44,5 +53,4 @@ class Tester:
             torch.cat([image, result, mask])
 
             save_image(torch.cat([image, result, mask]), os.path.join(self.sample_dir, f"{step}.png"))
-            print('[*] Saved sample images')
 

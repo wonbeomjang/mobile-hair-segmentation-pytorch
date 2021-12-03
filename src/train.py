@@ -1,6 +1,7 @@
 import os
 import time
 from glob import glob
+import copy
 
 import torch
 import torch.nn as nn
@@ -64,10 +65,9 @@ class Trainer:
         
         self.epoch = save_info['epoch'] + 1
         self.net = save_info['model']
-        self.net.load_state_dict(save_info['state_dict'])
         self.optimizer = save_info['optimizer']
         
-        print(f"[*] Load Model from {self.model_path}")
+        print(f"[*] Load Model from {ckpt}")
 
     def train(self):
         image_gradient_criterion = ImageGradientLoss().to(self.device)
@@ -84,7 +84,8 @@ class Trainer:
         
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
-        
+
+        print('Before quantize')
         self.device = 'cpu'
         self.net = self.net.to(self.device)
         self.val(image_gradient_criterion, bce_criterion)
@@ -100,11 +101,12 @@ class Trainer:
         self.net = self.net.eval().to('cpu')
         torch.quantization.convert(self.net, inplace=True)
         
-        self.device = 'cpu'
+        print('After quantize')
+        self.device = torch.device('cpu')
         iou, loss = self.val(image_gradient_criterion, bce_criterion)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': 0}
+        save_info = {'model': self.net, 'optimizer' : self.optimizer.state_dict(), 'epoch': 0}
         torch.save(save_info, f'{self.checkpoint_dir}/quantized.pt')
 
                 
@@ -147,9 +149,8 @@ class Trainer:
                 self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
                 # print('[*] Saved sample images')
         if not quantize:
-            save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
+            save_info = {'model': self.net, 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
             torch.save(save_info, f'{self.checkpoint_dir}/last.pt')
-
         
     def val(self, image_gradient_criterion, bce_criterion):
         self.net = self.net.eval()
