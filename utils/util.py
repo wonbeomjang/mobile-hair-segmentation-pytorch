@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import torch.ao.quantization
 
 class LambdaLR:
     def __init__(self, n_epoch, offset, total_batch_size, decay_batch_size):
@@ -32,11 +31,27 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def quantize_model(net, backend):
-    net.qconfig = torch.quantization.get_default_qat_qconfig(backend)
-    net.fuse_model()
-    net = torch.quantization.prepare_qat(net)
-    torch.quantization.convert(net, inplace=True)
-    net = net.eval()
+def quantize_model(model: nn.Module, backend: str) -> None:
+    _dummy_input_data = torch.rand(1, 3, 224, 224)
+    if backend not in torch.backends.quantized.supported_engines:
+        raise RuntimeError("Quantized backend not supported ")
+    torch.backends.quantized.engine = backend
+    model.eval()
+    # Make sure that weight qconfig matches that of the serialized models
+    if backend == "fbgemm":
+        model.qconfig = torch.ao.quantization.qconfig.QConfig(  # type: ignore[assignment]
+            activation=torch.ao.quantization.observer.default_observer,
+            weight=torch.ao.quantization.observer.default_per_channel_weight_observer,
+        )
+    elif backend == "qnnpack":
+        model.qconfig = torch.ao.quantization.qconfig.QConfig(  # type: ignore[assignment]
+            activation=torch.ao.quantization.observer.default_observer, weight=torch.ao.quantization.default_weight_observer
+        )
 
-    return net
+    # TODO https://github.com/pytorch/vision/pull/4232#pullrequestreview-730461659
+    model.fuse_model()  # type: ignore[operator]
+    torch.ao.quantization.prepare(model, inplace=True)
+    model(_dummy_input_data)
+    torch.ao.quantization.convert(model, inplace=True)
+
+    return

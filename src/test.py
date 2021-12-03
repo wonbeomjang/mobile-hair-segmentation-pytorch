@@ -36,7 +36,7 @@ class Tester:
 
         if self.quantize:
             self.net = QuantizableMobileHairNetV2()
-            self.net = quantize_model(self.net, 'fbgemm')
+            quantize_model(self.net, 'fbgemm')
 
         self.net.load_state_dict(save_info['state_dict'])
         
