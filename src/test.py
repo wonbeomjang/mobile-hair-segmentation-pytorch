@@ -16,18 +16,17 @@ class Tester:
         self.num_classes = config.num_classes
         self.num_test = config.num_test
         self.sample_dir = config.sample_dir
-        self.epoch = config.epoch
         self.checkpoint_dir = config.checkpoint_dir
         self.quantize = config.quantize
         self.load_model()
         
     def load_model(self):
-        save_info = torch.load(f'{self.checkpoint_dir}/quantized.pt') if self.quantize else torch.load(f'{self.checkpoint_dir}/last.pt')
+        save_info = torch.load(f'{self.checkpoint_dir}/quantized.pt', map_location=self.device) if self.quantize else torch.load(f'{self.checkpoint_dir}/last.pt', map_location=self.device)
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
         
         self.epoch = save_info['epoch']
         self.net = save_info['model']
-        self.net.load_state_dict(save_info['state_dict'], map_location=self.device)
+        self.net.load_state_dict(save_info['state_dict'])
         self.optimizer = save_info['optimizer']
         
         print(f"[*] Load Model from {self.model_path}")
