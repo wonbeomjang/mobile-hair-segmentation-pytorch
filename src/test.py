@@ -1,5 +1,4 @@
 import torch
-from models.modelv1 import MobileHairNet
 import os
 import numpy as np
 from glob import glob
@@ -19,15 +18,11 @@ class Tester:
         self.sample_dir = config.sample_dir
         self.epoch = config.epoch
         self.checkpoint_dir = config.checkpoint_dir
-        self.build_model()
-
-    def build_model(self):
-        self.net = MobileHairNet()
-        self.net.to(self.device)
+        self.quantize = config.quantize
         self.load_model()
         
     def load_model(self):
-        save_info = torch.load(f'{self.checkpoint_dir}/last.pth')
+        save_info = torch.load(f'{self.checkpoint_dir}/quantized.pt') if self.quantize else torch.load(f'{self.checkpoint_dir}/last.pt')
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
         
         self.epoch = save_info['epoch']

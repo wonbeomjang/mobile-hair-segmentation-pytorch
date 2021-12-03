@@ -71,9 +71,8 @@ class MobileHairNetV2(nn.Module):
         decode_layer2 = self.decode_layer2(decode_layer1) + encode_layer3
         decode_layer3 = self.decode_layer3(decode_layer2) + encode_layer2
         decode_layer4 = self.decode_layer4(decode_layer3) + encode_layer1
-        decode_layer5 = self.decode_layer5(decode_layer4)
+        out = self.decode_layer5(decode_layer4)
 
-        out = self.soft_max(decode_layer5)
         return out
 
     def _init_weight(self):
