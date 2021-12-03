@@ -29,14 +29,19 @@ class Tester:
     def load_model(self):
         ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/last.pt'
         print(f'[*] Load Model from {ckpt}')
-        save_info = torch.load(ckpt, map_location=self.device)
+        
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
          
-        self.net = save_info['model']
-
+         
         if self.quantize:
-            self.net = QuantizableMobileHairNetV2()
-            quantize_model(self.net, 'fbgemm')
+            self.net = torch.jit.load(ckpt)
+        else:
+            save_info = torch.load(ckpt, map_location=self.device)
+            self.net = save_info['model']  
+
+            # self.net = 
+            # self.net = QuantizableMobileHairNetV2()
+            # quantize_model(self.net, 'fbgemm')
 
         self.net.load_state_dict(save_info['state_dict'])
         
