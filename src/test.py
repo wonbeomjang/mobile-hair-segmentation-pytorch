@@ -1,11 +1,14 @@
 import torch
-from model.model import MobileHairNet
 import os
 import numpy as np
 from glob import glob
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torchvision.utils import save_image
 from utils.custom_transfrom import UnNormalize
+from utils.util import quantize_model, AverageMeter
+from models.quantization.modelv2 import QuantizableMobileHairNetV2
+from loss.loss import iou_loss
 
 class Tester:
     def __init__(self, config, dataloader):
@@ -17,44 +20,52 @@ class Tester:
         self.num_classes = config.num_classes
         self.num_test = config.num_test
         self.sample_dir = config.sample_dir
-        self.epoch = config.epoch
-        self.build_model()
-
-    def build_model(self):
-        self.net = MobileHairNet()
-        self.net.to(self.device)
+        self.checkpoint_dir = config.checkpoint_dir
+        self.quantize = config.quantize
+        if self.quantize:
+            self.device = torch.device('cpu')
         self.load_model()
-
+        
     def load_model(self):
-        print("[*] Load checkpoint in ", str(self.model_path))
-        if not os.path.exists(self.model_path):
-            os.makedirs(self.model_path)
+        ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/best.pt'
+        print(f'[*] Load Model from {ckpt}')
+        
+        # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
+         
+         
+        if self.quantize:
+            self.net = torch.jit.load(ckpt)
+        else:
+            save_info = torch.load(ckpt, map_location=self.device)
+            self.net = save_info['model']  
 
-        if not os.listdir(self.model_path):
-            print("[!] No checkpoint in ", str(self.model_path))
-            return
+            self.net.load_state_dict(save_info['state_dict'])
+        
 
-        model_path = os.path.join(self.model_path, f"MobileHairNet_epoch-{self.epoch}.pth")
-        model = glob(model_path)
-        model.sort()
-        if not model:
-            raise Exception(f"[!] No Checkpoint in {model_path}")
+    def test(self, net=None):
+        if net:
+            self.net = net
+        avg_meter = AverageMeter()
 
-        self.net.load_state_dict(torch.load(model[-1], map_location=self.device))
-        print(f"[*] Load Model from {model[-1]}: ")
-
-    def test(self):
         unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-        for step, (image, mask) in enumerate(self.data_loader):
-            image = unnormal(image.to(self.device))
-            mask = mask.to(self.device).repeat_interleave(3, 1)
+        pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
+        for step, (image, mask) in pbar:
+            image = image.to(self.device)
+            #image = unnormal(image.to(self.device))
             result = self.net(image)
+
+            mask = mask.to(self.device)
+
+            avg_meter.update(iou_loss(result, mask))
+            pbar.set_description(f'IOU: {avg_meter.avg:.4f}')
+
+            mask = mask.repeat_interleave(3, 1)
             argmax = torch.argmax(result, dim=1).unsqueeze(dim=1)
             result = result[:, 1, :, :].unsqueeze(dim=1)
             result = result * argmax
             result = result.repeat_interleave(3, 1)
             torch.cat([image, result, mask])
 
+
             save_image(torch.cat([image, result, mask]), os.path.join(self.sample_dir, f"{step}.png"))
-            print('[*] Saved sample images')
 

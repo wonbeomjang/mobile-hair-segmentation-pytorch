@@ -50,14 +50,24 @@ The name of the expected image pair is:
 ## how to train
 after 200 epoch, add other commented augmentation and remove resize  
 (dataloader/dataloader.py)  
-run main
+
+There are modelv1 and modelv2 whose backbone are mobilenetv1 and mobilenetv2 each other.
+Default is mobilenetv2
 ```
-python main.py
+python main.py --num_epoch [NUM_EPOCH] --model_version [1~2]
 ```
-if you want do transfer learning with model made of MobileNet V2 network
+If you want to quantize model
 ```
-python main.py --transfer_learning=True
+python main.py --num_epoch [NUM_EPOCH] --model_version [1~2] --quantize
 ```
+Or if you want to resume model training
+```
+python main.py --num_epoch [NUM_EPOCH] --model_version [1~2] --resume
+```
+```
+python main.py --num_epoch [NUM_EPOCH] --model_version [1~2] --model_path [MODEL_PATH]
+```
+
 ``` python
 from src.train import Trainer
 from data.dataloader import get_loader
@@ -70,7 +80,11 @@ trainer = Trainer(config, data_loader)
 ```
 ## Test
 ```bash
-python webcam.py
+python webcam.py --model_path [MODEL_PATH]
+```
+if you want to use quantized model
+```bash
+python webcam.py --model_path [MODEL_PATH] --quantize
 ```
 
 ## Overall result

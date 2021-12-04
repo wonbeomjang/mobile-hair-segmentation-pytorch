@@ -5,9 +5,9 @@ import torch.nn.functional as F
 
 
 class ImageGradientLoss(_WeightedLoss):
-    def __init__(self, size_average=None, reduce=None, reduction='mean'):
+    def __init__(self, size_average=None, reduce=None, reduction='mean', device=None):
         super(ImageGradientLoss, self).__init__(size_average, reduce, reduction)
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = device if device else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def forward(self, pred, gray_image):
         size = pred.size()

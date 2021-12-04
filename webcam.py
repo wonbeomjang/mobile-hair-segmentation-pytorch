@@ -1,10 +1,13 @@
 import cv2
 import torch
-from model.model import MobileHairNet
-from config.config import get_config
+from models.quantization.modelv2 import QuantizableMobileHairNetV2
+from utils.util import quantize_model
 import os
 import numpy as np
 from glob import glob
+import argparse
+
+
 
 def get_mask(image, net, size=224):
     image_h, image_w = image.shape[0], image.shape[1]
@@ -23,6 +26,22 @@ def get_mask(image, net, size=224):
 
     return mask_cv2
 
+def load_model(model_path=None, quantize=False, device=torch.device('cpu')):
+    if not model_path:
+        model_path = f'param/quantized.pt' if quantize else f'param/best.pt'
+    print(f'[*] Load Model from {model_path}')
+    save_info = torch.load(model_path, map_location=device)
+    # save_info = {'model': net, 'state_dict': net.state_dict(), 'optimizer' : optimizer.state_dict()} 
+
+    if quantize or model_path.endswith('quantized.pt'):
+        net = torch.jit.load(model_path)
+    else:
+        save_info = torch.load(model_path, map_location=device)
+        net = save_info['model']
+        net.load_state_dict(save_info['state_dict'])
+        
+    return net
+    
 
 def alpha_image(image, mask, alpha=0.1):
     color = np.zeros((mask.shape[0], mask.shape[1], 3))
@@ -34,11 +53,14 @@ def alpha_image(image, mask, alpha=0.1):
 
 
 if __name__ == "__main__":
-    config = get_config()
-    pretrained = glob(os.path.join("param", f"MobileHairNet.pth"))[-1]
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = MobileHairNet().to(device)
-    net.load_state_dict(torch.load(pretrained, map_location=device))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--quantize', nargs='?', const=True, default=False, help='load and train quantizable model')
+    parser.add_argument('--model_path', default=None, help="path to saved model parameters")
+    
+    args = parser.parse_args()
+    
+    device = torch.device("cuda:0" if torch.cuda.is_available() and not args.quantize else "cpu")
+    net = load_model(args.model_path, args.quantize, device)
     cam = cv2.VideoCapture(0)
 
     if not cam.isOpened():
