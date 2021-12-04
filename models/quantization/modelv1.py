@@ -14,7 +14,7 @@ from .blocks import QuantizableLayerDepwiseDecode, QuantizableLayerDepwiseEncode
 
 class QuantizableMobileHairNet(MobileHairNet):
     def __init__(self, decode_block=QuantizableLayerDepwiseDecode, *args, **kwargs):
-        super(QuantizableMobileHairNet, self).__init__(encode_block=QuantizableLayerDepwiseDecode, decode_block=QuantizableLayerDepwiseDecode)
+        super(QuantizableMobileHairNet, self).__init__(encode_block=QuantizableLayerDepwiseEncode, decode_block=QuantizableLayerDepwiseDecode)
         
         self.quant = torch.quantization.QuantStub()
         self.dequant = torch.quantization.DeQuantStub()
