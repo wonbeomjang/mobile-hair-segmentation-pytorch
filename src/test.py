@@ -27,7 +27,7 @@ class Tester:
         self.load_model()
         
     def load_model(self):
-        ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/last.pt'
+        ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/best.pt'
         print(f'[*] Load Model from {ckpt}')
         
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
@@ -50,7 +50,8 @@ class Tester:
         unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
         for step, (image, mask) in pbar:
-            image = unnormal(image.to(self.device))
+            image = image.to(self.device)
+            #image = unnormal(image.to(self.device))
             result = self.net(image)
 
             mask = mask.to(self.device)

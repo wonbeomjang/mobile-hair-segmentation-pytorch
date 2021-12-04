@@ -73,15 +73,37 @@ class Trainer:
     def train(self):
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
+        best = 0
+
+        if os.path.exists('results.csv'):
+            f = open('results.csv', 'a')
+        else:
+            f = open('results.csv', 'w')
+            f.write('epoch,iou,loss\n')
 
         for epoch in range(self.epoch, self.num_epoch):
             self._train_one_epoch(epoch, image_gradient_criterion, bce_criterion)
             if self.val_loader:
                 iou, loss = self.val(image_gradient_criterion, bce_criterion)
+                f.write(f'{epoch},{iou:.4f},{loss:4f}\n')
+                if iou > best:
+                    best = iou
+                    save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
+                    torch.save(save_info, f'{self.checkpoint_dir}/best.pt')
+
+        print('Final IOU: {best:.4f}')
+        f.close()
     
     def quantize_model(self):
         if not self.quantize:
             return
+
+        print('Load Best Model')
+        ckpt = f'{self.checkpoint_dir}/last.pt'
+        save_info = torch.load(ckpt, map_location=self.device)
+        self.net.load_state_dict(save_info['state_dict'])
+        # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
+
        
         print('Before quantize')
         self.device = torch.device('cpu')
@@ -158,6 +180,8 @@ class Trainer:
             save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
             torch.save(save_info, f'{self.checkpoint_dir}/last.pt')
 
+        return iou_avg.avg, bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
+
 
     def val(self, image_gradient_criterion, bce_criterion):
         self.net = self.net.eval()
@@ -200,7 +224,7 @@ class Trainer:
         
         os.remove("tmp.pt")
         self.net = self.net.train()
-        return iou, bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
+        return iou_avg.avg, bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
         
     def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
         data = [real_img, real_mask, prediction]
