@@ -28,7 +28,7 @@ def get_mask(image, net, size=224):
 
 def load_model(model_path=None, quantize=False, device=torch.device('cpu')):
     if not model_path:
-        model_path = f'checkpoint/quantized.pt' if quantize else f'checkpoint/last.pt'
+        model_path = f'param/quantized.pt' if quantize else f'param/best.pt'
     print(f'[*] Load Model from {model_path}')
     save_info = torch.load(model_path, map_location=device)
     # save_info = {'model': net, 'state_dict': net.state_dict(), 'optimizer' : optimizer.state_dict()} 
