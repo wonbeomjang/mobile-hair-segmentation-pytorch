@@ -8,22 +8,17 @@ from torch.quantization import QuantStub, DeQuantStub, fuse_modules
 from torchvision.models.quantization.mobilenetv2 import QuantizableInvertedResidual
 from torchvision.ops.misc import ConvNormActivation
 
-from ..modelv2 import MobileHairNetV2
-from .blocks import QuantizableLayerDepwiseDecode
+from ..modelv1 import MobileHairNet
+from .blocks import QuantizableLayerDepwiseDecode, QuantizableLayerDepwiseEncode
 
 
-class QuantizableMobileHairNetV2(MobileHairNetV2):
+class QuantizableMobileHairNetV1(MobileHairNet):
     def __init__(self, decode_block=QuantizableLayerDepwiseDecode, *args, **kwargs):
-        super(QuantizableMobileHairNetV2, self).__init__()
+        super(QuantizableMobileHairNetV1, self).__init__(encode_block=QuantizableLayerDepwiseDecode, decode_block=QuantizableLayerDepwiseDecode)
         
-        self.mobilenet = mobilenet_v2()
         self.quant = torch.quantization.QuantStub()
         self.dequant = torch.quantization.DeQuantStub()
         self.f_add = FloatFunctional()
-        
-        _replace_relu(self.mobilenet)
-        self.make_layers()
-        self._init_weight()
         
     def forward(self, x):
         x = self.quant(x)

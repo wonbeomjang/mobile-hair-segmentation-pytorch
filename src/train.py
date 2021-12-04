@@ -12,6 +12,7 @@ from torch.optim.adadelta import Adadelta
 
 from models.modelv1 import MobileHairNet
 from models.modelv2 import MobileHairNetV2
+from models.quantization.modelv1 import QuantizableMobileHairNet
 from models.quantization.modelv2 import QuantizableMobileHairNetV2
 from loss.loss import ImageGradientLoss, iou_loss
 from utils.util import LambdaLR, AverageMeter
@@ -42,7 +43,10 @@ class Trainer:
 
     def build_model(self):
         if self.model_version == 1:
-            self.net = MobileHairNet().to(self.device)
+            if self.quantize:
+                self.net = QuantizableMobileHairNet().to(self.device)
+            else:
+                self.net = MobileHairNet().to(self.device)
         elif self.model_version == 2:
             if self.quantize:
                 self.net = QuantizableMobileHairNetV2().to(self.device)
