@@ -82,16 +82,18 @@ class Trainer:
     def quantize_model(self):
         if not self.quantize:
             return
-        
-        image_gradient_criterion = ImageGradientLoss().to(self.device)
+       
+        print('Before quantize')
+        self.device = torch.device('cpu')
+        image_gradient_criterion = ImageGradientLoss(device=self.device).to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
 
-        print('Before quantize')
-        self.device = 'cpu'
         self.net = self.net.to(self.device)
         self.val(image_gradient_criterion, bce_criterion)
+
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.net = self.net.to(self.device)
+        image_gradient_criterion.device = self.device
 
         self.net.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
         self.net.fuse_model()
@@ -99,7 +101,9 @@ class Trainer:
         
         self._train_one_epoch(0, image_gradient_criterion, bce_criterion, quantize=True)
         
-        self.net = self.net.eval().to('cpu')
+        self.device = torch.device('cpu')
+        self.net = self.net.eval().to(self.device)
+        image_gradient_criterion.device = self.device
         torch.quantization.convert(self.net, inplace=True)
         
         print('After quantize')
@@ -180,14 +184,14 @@ class Trainer:
     
                 # preds_flat.shape (N*224*224, 2)
                 # masks_flat.shape (N*224*224, 1)
-                #image_gradient_loss = image_gradient_criterion(pred, gray_image)
-                #bce_loss = bce_criterion(pred_flat, mask_flat)
+                image_gradient_loss = image_gradient_criterion(pred, gray_image)
+                bce_loss = bce_criterion(pred_flat, mask_flat)
     
-                #loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
+                loss = bce_loss + self.gradient_loss_weight * image_gradient_loss
                 iou = iou_loss(pred, mask)
                 
-                #bce_losses.update(bce_loss.item(), self.batch_size)
-                #image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
+                bce_losses.update(bce_loss.item(), self.batch_size)
+                image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
                 iou_avg.update(iou)
     
                 pbar.set_description(f"Validate... Bce Loss: {bce_losses.avg:.4f} | "
@@ -196,7 +200,7 @@ class Trainer:
         
         os.remove("tmp.pt")
         self.net = self.net.train()
-        return iou, 0
+        return iou, bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
         
     def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
         data = [real_img, real_mask, prediction]

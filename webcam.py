@@ -31,15 +31,14 @@ def load_model(model_path=None, quantize=False, device=torch.device('cpu')):
         model_path = f'checkpoint/quantized.pt' if quantize else f'checkpoint/last.pt'
     print(f'[*] Load Model from {model_path}')
     save_info = torch.load(model_path, map_location=device)
-    # save_info = {'model': net, 'state_dict': net.state_dict(), 'optimizer' : optimizer.state_dict()}
-     
-    net = save_info['model']
+    # save_info = {'model': net, 'state_dict': net.state_dict(), 'optimizer' : optimizer.state_dict()} 
 
     if quantize or model_path.endswith('quantized.pt'):
-        net = QuantizableMobileHairNetV2()
-        net = quantize_model(net, 'fbgemm')
-
-    net.load_state_dict(save_info['state_dict'])
+        net = torch.jit.load(model_path)
+    else:
+        save_info = torch.load(model_path, map_location=device)
+        net = save_info['model']
+        net.load_state_dict(save_info['state_dict'])
         
     return net
     
