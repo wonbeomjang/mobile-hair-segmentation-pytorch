@@ -27,6 +27,9 @@ parser.add_argument('--model_version', type=int, default=2, help='MobileHairNet 
 parser.add_argument('--gradient_loss_weight', type=int, default=0.5, help='The number of test image')
 parser.add_argument('--quantize', nargs='?', const=True, default=False, help='load and train quantizable model')
 parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
+parser.add_argument('--num_quantize_train', type=int, default=1, help='the number of quantize aware training')
+parser.add_argument('--test', nargs='?', const=True, default=False, help='test')
+
 
 def get_config():
     return parser.parse_args()

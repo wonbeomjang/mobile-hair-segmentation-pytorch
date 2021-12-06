@@ -37,6 +37,7 @@ class Trainer:
         self.model_version = config.model_version
         self.quantize = config.quantize
         self.resume = config.resume
+        self.num_quantize_train = config.num_quantize_train
 
         self.build_model()
         self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=config.eps, rho=config.rho, weight_decay=config.decay)
@@ -78,6 +79,7 @@ class Trainer:
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
         best = 0
+        best_loss = 0
 
         if os.path.exists('results.csv'):
             f = open('results.csv', 'a')
@@ -92,10 +94,13 @@ class Trainer:
                 f.write(f'{epoch},{iou:.4f},{loss:4f}\n')
                 if iou > best:
                     best = iou
+                    best_loss = loss
+
                     save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict(), 'epoch': epoch}
                     torch.save(save_info, f'{self.checkpoint_dir}/best.pt')
-
-        print('Final IOU: {best:.4f}')
+        
+        f.write(f'final,{best:.4f},{best_loss:.4f}\n')
+        print(f'Final IOU: {best:.4f}')
         f.close()
     
     def quantize_model(self):
@@ -125,8 +130,12 @@ class Trainer:
         self.net.fuse_model()
         self.net = torch.quantization.prepare_qat(self.net)
         
-        self._train_one_epoch(0, image_gradient_criterion, bce_criterion, quantize=True)
-        
+        temp = self.num_epoch
+        self.num_epoch = self.num_quantize_train
+        for i in range(self.num_quantize_train):
+            self._train_one_epoch(i, image_gradient_criterion, bce_criterion, quantize=True)
+        self.num_epoch = temp
+
         self.device = torch.device('cpu')
         self.net = self.net.eval().to(self.device)
         image_gradient_criterion.device = self.device
