@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import math
 
 class LambdaLR:
     def __init__(self, n_epoch, offset, total_batch_size, decay_batch_size):
@@ -25,6 +26,8 @@ class AverageMeter(object):
         self.count = 0
 
     def update(self, val, n=1):
+        if math.isnan(val):
+            return
         self.val = val
         self.sum += val * n
         self.count += n
