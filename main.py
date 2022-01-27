@@ -1,7 +1,6 @@
 import os
 
 from config.config import get_config
-from data.dataloader import get_loader
 import data.test_loader
 from src.train import Trainer
 from src.test import Tester
@@ -28,11 +27,8 @@ def main(config):
 
     if not config.test:
 
-        data_loader, val_loader = get_loader(config.data_path, config.batch_size, config.image_size,
-                             shuffle=True, num_workers=int(config.workers))
-                             
 
-        trainer = Trainer(config, data_loader, val_loader)
+        trainer = Trainer(config)
         trainer.train()
     
         if config.quantize:

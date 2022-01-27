@@ -1,8 +1,8 @@
 #
 #
 # data folder 구조
-# (data_folder) / original
-# (data_folder) / mask
+# (data_folder) / images
+# (data_folder) / masks
 # (data_folder) / ...
 # (data_folder) / ...
 #
@@ -16,28 +16,42 @@ import torchvision.transforms.functional as TF
 import random
 
 
-def transform(image, mask, image_size=224):
-    # Resize
-    resized_num = int(random.random() * image_size)
-    resize = transforms.Resize(size=(image_size + resized_num, image_size + resized_num))
-    image = resize(image)
-    mask = resize(mask)
+def check_data(data_folder):
+    masks = set(os.listdir(f'{data_folder}/masks/'))
+    image = set(os.listdir(f'{data_folder}/images/'))
 
+    intersection = masks.intersection(image)
+    union = masks.union(image)
+    print(f"[!] {len(union) - len(intersection)} of {len(union)} images doesn't match")
+
+    return list(intersection)
+
+
+def transform(image, mask, image_size=224):
+    # # Resize
+    # resized_num = int(random.random() * image_size)
+    # image = TF.resize(image, [image_size + resized_num, image_size + resized_num])
+    # mask = TF.resize(mask, [image_size + resized_num, image_size + resized_num])
+    #
     # num_pad = int(random.random() * image_size)
     # image = TF.pad(image, num_pad, padding_mode='edge')
     # mask = TF.pad(mask, num_pad)
 
-    # # Random crop
+    # Random crop
     # i, j, h, w = transforms.RandomCrop.get_params(
     #     image, output_size=(image_size, image_size))
     # image = TF.crop(image, i, j, h, w)
     # mask = TF.crop(mask, i, j, h, w)
-
-
+    #
     # # Random horizontal flipping
     # if random.random() > 0.5:
     #     image = TF.hflip(image)
     #     mask = TF.hflip(mask)
+    #
+    # degree = random.random() * 360
+    #
+    # image = TF.rotate(image, degree)
+    # mask = TF.rotate(mask, degree)
     #
     # # Random vertical flipping
     # if random.random() > 0.5:
@@ -48,6 +62,8 @@ def transform(image, mask, image_size=224):
     image = resize(image)
     mask = resize(mask)
 
+    mask = TF.to_grayscale(mask)
+
     # Make gray scale image
     gray_image = TF.to_grayscale(image)
 
@@ -57,8 +73,7 @@ def transform(image, mask, image_size=224):
     gray_image = TF.to_tensor(gray_image)
 
     # Normalize Data
-    image = TF.normalize(image, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-
+    image = TF.normalize(image, [0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     return image, gray_image, mask
 
 
@@ -69,7 +84,7 @@ class Dataset(torch.utils.data.Dataset):
             raise Exception(f"[!] {self.data_folder} not exists.")
 
         self.objects_path = []
-        self.image_name = os.listdir(os.path.join(data_folder, "images"))
+        self.image_name = check_data(data_folder)
         if len(self.image_name) == 0:
             raise Exception(f"No image found in {self.image_name}")
         for p in os.listdir(data_folder):
@@ -85,7 +100,6 @@ class Dataset(torch.utils.data.Dataset):
 
         image, gray_image, mask = transform(image, mask)
 
-
         return image, gray_image, mask
 
     def __len__(self):
@@ -94,16 +108,20 @@ class Dataset(torch.utils.data.Dataset):
 
 def get_loader(data_folder, batch_size, image_size, shuffle, num_workers):
     dataset = Dataset(data_folder, image_size)
-    
-    dataset, valset = torch.utils.data.random_split(dataset, [int(len(dataset) * 0.95), len(dataset) - int(len(dataset) * 0.95)])
 
-    dataloader = torch.utils.data.DataLoader(dataset=dataset,
+    dataset, val_set = torch.utils.data.random_split(dataset,
+                                                    [int(len(dataset) * 0.95), len(dataset) - int(len(dataset) * 0.95)])
+
+    data_loader = torch.utils.data.DataLoader(dataset=dataset,
                                              batch_size=batch_size,
                                              shuffle=shuffle,
                                              num_workers=num_workers)
 
-    valloader = torch.utils.data.DataLoader(dataset=valset,
-                                             batch_size=batch_size,
-                                             shuffle=False,
-                                             num_workers=num_workers)
-    return dataloader, valloader
+    val_loader = torch.utils.data.DataLoader(dataset=val_set,
+                                            batch_size=batch_size,
+                                            shuffle=False,
+                                            num_workers=num_workers)
+    return data_loader, val_loader
+
+
+
