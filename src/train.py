@@ -1,7 +1,7 @@
 import os
 import time
-from glob import glob
-import copy
+import traceback
+from shutil import move
 
 import torch
 import torch.nn as nn
@@ -9,6 +9,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from torch.optim.adadelta import Adadelta
+from torch.optim.lr_scheduler import OneCycleLR
 
 from models.modelv1 import MobileHairNet
 from models.modelv2 import MobileHairNetV2
@@ -21,7 +22,7 @@ from data.dataloader import get_loader
 
 
 class Trainer:
-    def __init__(self, config):
+    def __init__(self, config, wandb):
         self.data_loader, self.val_loader = get_loader(config.data_path, config.batch_size, config.image_size,
                                                        shuffle=True, num_workers=int(config.workers))
         self.batch_size = config.batch_size
@@ -41,6 +42,8 @@ class Trainer:
         self.quantize = config.quantize
         self.resume = config.resume
         self.num_quantize_train = config.num_quantize_train
+
+        self.wandb = wandb
 
         self.build_model()
         self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=config.eps, rho=config.rho,
@@ -69,7 +72,12 @@ class Trainer:
 
         ckpt = os.path.join(self.checkpoint_dir, 'last.pt') if self.resume else self.model_path
 
-        save_info = torch.load(ckpt, map_location=self.device)
+        try:
+            save_info = torch.load(self.wandb.restore(ckpt), map_location=self.device)
+        except ValueError:
+            print(traceback.format_exc())
+            print("[!] Wandb load fail")
+            save_info = torch.load(ckpt, map_location=self.device)
         # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
 
         self.epoch = save_info['epoch'] + 1
@@ -92,9 +100,14 @@ class Trainer:
             f.write('epoch,iou,loss\n')
 
         for epoch in range(self.epoch, self.num_epoch):
-            self._train_one_epoch(epoch, image_gradient_criterion, bce_criterion)
+            results = self._train_one_epoch(epoch, image_gradient_criterion, bce_criterion)
+
             if self.val_loader:
-                iou, loss = self.val(image_gradient_criterion, bce_criterion)
+                val_results = self.val(image_gradient_criterion, bce_criterion)
+                results.update(val_results)
+                iou = val_results["val/iou"]
+                loss = val_results["val/loss"]
+
                 f.write(f'{epoch},{iou:.4f},{loss:4f}\n')
                 if iou > best:
                     best = iou
@@ -103,6 +116,9 @@ class Trainer:
                     save_info = {'model': self.net, 'state_dict': self.net.state_dict(),
                                  'optimizer': self.optimizer.state_dict(), 'epoch': epoch}
                     torch.save(save_info, f'{self.checkpoint_dir}/best.pt')
+
+            if self.wandb:
+                self.wandb.log(results)
 
         f.write(f'final,{best:.4f},{best_loss:.4f}\n')
         print(f'Final IOU: {best:.4f}')
@@ -147,7 +163,7 @@ class Trainer:
 
         print('After quantize')
         self.device = torch.device('cpu')
-        iou, loss = self.val(image_gradient_criterion, bce_criterion)
+        self.val(image_gradient_criterion, bce_criterion)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         torch.jit.save(torch.jit.script(self.net), f'{self.checkpoint_dir}/quantized.pt')
@@ -159,6 +175,9 @@ class Trainer:
         image_gradient_losses = AverageMeter()
         iou_avg = AverageMeter()
         pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
+        image, mask, pred = None, None, None
+        results = {}
+
         for step, (image, gray_image, mask) in pbar:
             image = image.to(self.device)
             mask = mask.to(self.device)
@@ -181,7 +200,6 @@ class Trainer:
             self.optimizer.step()
 
             iou = iou_loss(pred, mask)
-
             bce_losses.update(bce_loss.item(), self.batch_size)
             image_gradient_losses.update(self.gradient_loss_weight * image_gradient_loss, self.batch_size)
             iou_avg.update(iou)
@@ -189,20 +207,33 @@ class Trainer:
             pbar.set_description(f"Epoch: [{epoch}/{self.num_epoch}] | Bce Loss: {bce_losses.avg:.4f} | "
                                  f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou_avg.avg:.4f}")
 
-            if step % self.sample_step == 0:
-                self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
-                # print('[*] Saved sample images')
+            # if step % self.sample_step == 0: 
+            #     self.save_sample_imgs(image[0], mask[0], torch.argmax(pred[0], 0), self.sample_dir, epoch, step)
+            #     print('[*] Saved sample images')
         if not quantize:
             save_info = {'model': self.net, 'state_dict': self.net.state_dict(),
                          'optimizer': self.optimizer.state_dict(), 'epoch': epoch}
             torch.save(save_info, f'{self.checkpoint_dir}/last.pt')
+            try:
+                self.wandb.save(f'{os.getcwd()}/{self.checkpoint_dir}/last.pt')
+            except OSError:
+                print(traceback.format_exc())
+                print("[!] Save wandb fail")
 
-        return iou_avg.avg, bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
+        if self.wandb and image is not None:
+            img = torch.cat(
+                [image[0], mask[0].repeat(3, 1, 1), pred[0].argmax(dim=0).unsqueeze(dim=0).repeat(3, 1, 1)], dim=2)
+            results["prediction"] = self.wandb.Image(img)
+        results["train/iou"] = iou_avg.avg
+        results["train/loss"] = bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
+
+        return results
 
     def val(self, image_gradient_criterion, bce_criterion):
         self.net = self.net.eval()
         torch.save(self.net.state_dict(), "tmp.pt")
         model_size = "%.2f MB" % (os.path.getsize("tmp.pt") / 1e6)
+        results = {}
         with torch.no_grad():
             bce_losses = AverageMeter()
             image_gradient_losses = AverageMeter()
@@ -240,9 +271,12 @@ class Trainer:
 
         os.remove("tmp.pt")
         self.net = self.net.train()
-        return iou_avg.avg, bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
+        results["val/iou"] = iou_avg.avg
+        results["val/loss"] = bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight
 
-    def save_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
+        return results
+
+    def make_sample_imgs(self, real_img, real_mask, prediction, save_dir, epoch, step):
         data = [real_img, real_mask, prediction]
         names = ["Image", "Mask", "Prediction"]
 

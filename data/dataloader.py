@@ -8,7 +8,9 @@
 #
 #
 import os
+import cv2
 
+from tqdm import tqdm
 import torch.utils.data
 import torchvision.transforms as transforms
 from PIL import Image
@@ -22,9 +24,23 @@ def check_data(data_folder):
 
     intersection = masks.intersection(image)
     union = masks.union(image)
-    print(f"[!] {len(union) - len(intersection)} of {len(union)} images doesn't match")
+    print(f"[!] {len(union) - len(intersection)} of {len(union)} images doesn't have mask")
 
-    return list(intersection)
+    intersection = list(intersection)
+
+    # print('[*] Check that if mask image is single channel')
+    # index = 0
+    # for image in tqdm(intersection):
+    #     img = cv2.imread(f'{data_folder}/masks/{image}')
+    #
+    #     if img.shape[-1] == 3:
+    #         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #         cv2.imwrite(f'{data_folder}/masks/{image}', img)
+    #         index += 1
+    #
+    # print(f"[!] {index} images are changed")
+
+    return intersection
 
 
 def transform(image, mask, image_size=224):
@@ -61,8 +77,6 @@ def transform(image, mask, image_size=224):
     resize = transforms.Resize(size=(image_size, image_size))
     image = resize(image)
     mask = resize(mask)
-
-    mask = TF.to_grayscale(mask)
 
     # Make gray scale image
     gray_image = TF.to_grayscale(image)
@@ -110,18 +124,16 @@ def get_loader(data_folder, batch_size, image_size, shuffle, num_workers):
     dataset = Dataset(data_folder, image_size)
 
     dataset, val_set = torch.utils.data.random_split(dataset,
-                                                    [int(len(dataset) * 0.95), len(dataset) - int(len(dataset) * 0.95)])
+                                                     [int(len(dataset) * 0.95),
+                                                      len(dataset) - int(len(dataset) * 0.95)])
 
     data_loader = torch.utils.data.DataLoader(dataset=dataset,
-                                             batch_size=batch_size,
-                                             shuffle=shuffle,
-                                             num_workers=num_workers)
+                                              batch_size=batch_size,
+                                              shuffle=shuffle,
+                                              num_workers=num_workers)
 
     val_loader = torch.utils.data.DataLoader(dataset=val_set,
-                                            batch_size=batch_size,
-                                            shuffle=False,
-                                            num_workers=num_workers)
+                                             batch_size=batch_size,
+                                             shuffle=False,
+                                             num_workers=num_workers)
     return data_loader, val_loader
-
-
-

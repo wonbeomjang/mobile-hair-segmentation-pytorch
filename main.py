@@ -1,11 +1,13 @@
 import os
 
+import wandb
+
 from config.config import get_config
 import data.test_loader
 from src.train import Trainer
 from src.test import Tester
 
-
+wandb.log
 def main(config):
     if config.checkpoint_dir is None:
         config.checkpoint_dir = 'checkpoints'
@@ -25,10 +27,10 @@ def main(config):
 
     # cudnn.benchmark = True
 
+    run = wandb.init(project='hair_segmentation', resume=True)
+
     if not config.test:
-
-
-        trainer = Trainer(config)
+        trainer = Trainer(config, wandb)
         trainer.train()
     
         if config.quantize:
@@ -38,6 +40,8 @@ def main(config):
                                               shuffle=None, num_workers=int(config.workers))
     tester = Tester(config, test_loader)
     tester.test()
+
+    run.finish()
 
 
 if __name__ == "__main__":
