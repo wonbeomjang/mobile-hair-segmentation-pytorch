@@ -7,7 +7,7 @@ parser.add_argument('--image_size', type=int, default=255, help='the height / wi
 parser.add_argument('--num_classes', type=int, default=2, help='number of model output channels')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 parser.add_argument('--test_batch_size', type=int, default=1, help='test batch size')
-parser.add_argument('--num_epoch', type=int, default=500, help='number of epochs to train for')
+parser.add_argument('--num_epoch', type=int, default=200, help='number of epochs to train for')
 parser.add_argument('--decay_epoch', type=int, default=100, help='learning rate decay start epoch num')
 parser.add_argument('--lr', type=float, default=1, help='learning rate')
 parser.add_argument('--rho', type=float, default=0.95, help='adadelta rho')

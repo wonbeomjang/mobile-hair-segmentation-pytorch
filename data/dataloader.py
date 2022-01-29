@@ -8,7 +8,6 @@
 #
 #
 import os
-import cv2
 
 from tqdm import tqdm
 import torch.utils.data
@@ -27,18 +26,6 @@ def check_data(data_folder):
     print(f"[!] {len(union) - len(intersection)} of {len(union)} images doesn't have mask")
 
     intersection = list(intersection)
-
-    # print('[*] Check that if mask image is single channel')
-    # index = 0
-    # for image in tqdm(intersection):
-    #     img = cv2.imread(f'{data_folder}/masks/{image}')
-    #
-    #     if img.shape[-1] == 3:
-    #         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #         cv2.imwrite(f'{data_folder}/masks/{image}', img)
-    #         index += 1
-    #
-    # print(f"[!] {index} images are changed")
 
     return intersection
 
@@ -80,6 +67,7 @@ def transform(image, mask, image_size=224):
 
     # Make gray scale image
     gray_image = TF.to_grayscale(image)
+    mask = TF.to_grayscale(mask)
 
     # Transform to tensor
     image = TF.to_tensor(image)

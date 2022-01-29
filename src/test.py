@@ -1,14 +1,11 @@
 import torch
 import os
-import numpy as np
-from glob import glob
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from torchvision.utils import save_image
 from utils.custom_transfrom import UnNormalize
-from utils.util import quantize_model, AverageMeter
-from models.quantization.modelv2 import QuantizableMobileHairNetV2
+from utils.util import AverageMeter
 from loss.loss import iou_loss
+
 
 class Tester:
     def __init__(self, config, dataloader):
@@ -29,18 +26,13 @@ class Tester:
     def load_model(self):
         ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/best.pt'
         print(f'[*] Load Model from {ckpt}')
-        
-        # save_info = {'model': self.net, 'state_dict': self.net.state_dict(), 'optimizer' : self.optimizer.state_dict()}
-         
-         
+
         if self.quantize:
             self.net = torch.jit.load(ckpt)
         else:
             save_info = torch.load(ckpt, map_location=self.device)
-            self.net = save_info['model']  
-
+            self.net = save_info['model']
             self.net.load_state_dict(save_info['state_dict'])
-        
 
     def test(self, net=None):
         if net:
