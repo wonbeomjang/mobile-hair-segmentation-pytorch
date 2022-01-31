@@ -15,19 +15,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 import torchvision.transforms.functional as TF
 import random
-
-
-def check_data(data_folder):
-    masks = set(os.listdir(f'{data_folder}/masks/'))
-    image = set(os.listdir(f'{data_folder}/images/'))
-
-    intersection = masks.intersection(image)
-    union = masks.union(image)
-    print(f"[!] {len(union) - len(intersection)} of {len(union)} images doesn't have mask")
-
-    intersection = list(intersection)
-
-    return intersection
+from data.utils import check_data
 
 
 def transform(image, mask, image_size=224):

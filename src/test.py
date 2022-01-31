@@ -37,27 +37,28 @@ class Tester:
     def test(self, net=None):
         if net:
             self.net = net
+
         avg_meter = AverageMeter()
+        with torch.no_grad():
+            unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
+            for step, (image, mask) in pbar:
+                image = image.to(self.device)
+                #image = unnormal(image.to(self.device))
+                result = self.net(image)
 
-        unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-        pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
-        for step, (image, mask) in pbar:
-            image = image.to(self.device)
-            #image = unnormal(image.to(self.device))
-            result = self.net(image)
+                mask = mask.to(self.device)
 
-            mask = mask.to(self.device)
+                avg_meter.update(iou_loss(result, mask))
+                pbar.set_description(f'IOU: {avg_meter.avg:.4f}')
 
-            avg_meter.update(iou_loss(result, mask))
-            pbar.set_description(f'IOU: {avg_meter.avg:.4f}')
-
-            mask = mask.repeat_interleave(3, 1)
-            argmax = torch.argmax(result, dim=1).unsqueeze(dim=1)
-            result = result[:, 1, :, :].unsqueeze(dim=1)
-            result = result * argmax
-            result = result.repeat_interleave(3, 1)
-            torch.cat([image, result, mask])
+                mask = mask.repeat_interleave(3, 1)
+                argmax = torch.argmax(result, dim=1).unsqueeze(dim=1)
+                result = result[:, 1, :, :].unsqueeze(dim=1)
+                result = result * argmax
+                result = result.repeat_interleave(3, 1)
+                torch.cat([image, result, mask])
 
 
-            save_image(torch.cat([image, result, mask]), os.path.join(self.sample_dir, f"{step}.png"))
+                save_image(torch.cat([image, result, mask]), os.path.join(self.sample_dir, f"{step}.png"))
 

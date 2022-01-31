@@ -131,7 +131,7 @@ class Trainer:
             return
 
         print('Load Best Model')
-        ckpt = f'{self.checkpoint_dir}/best.pt'
+        ckpt = f'{self.checkpoint_dir}/mobilenetv2.pt'
         save_info = torch.load(ckpt, map_location=self.device)
         self.net = save_info['model']
         self.net.load_state_dict(save_info['state_dict'])
@@ -154,6 +154,9 @@ class Trainer:
 
         temp = self.num_epoch
         self.num_epoch = self.num_quantize_train
+        self.lr_scheduler = OneCycleLR(optimizer=self.optimizer, max_lr=self.lr, epochs=self.num_epoch,
+                                       steps_per_epoch=self.image_len, cycle_momentum=False)
+
         for i in range(self.num_quantize_train):
             self._train_one_epoch(i, image_gradient_criterion, bce_criterion, quantize=True)
         self.num_epoch = temp
@@ -216,7 +219,6 @@ class Trainer:
                          'lr_scheduler': self.lr_scheduler.state_dict(), 'run_id': self.run.id}
             torch.save(save_info, f'{self.checkpoint_dir}/last.pt')
             wandb.save(f'{self.checkpoint_dir}/last.pt', './')
-            print(f"[*] Save model Epoch: {epoch}")
         if image is not None:
             img = torch.cat(
                 [image[0], mask[0].repeat(3, 1, 1), pred[0].argmax(dim=0).unsqueeze(dim=0).repeat(3, 1, 1)], dim=2)

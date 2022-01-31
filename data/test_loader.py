@@ -4,7 +4,7 @@ import torch.utils.data
 import torchvision.transforms as transforms
 from PIL import Image
 import torchvision.transforms.functional as TF
-from random import random
+from data.utils import check_data
 
 
 def transform(image, mask, image_size=224):
@@ -12,28 +12,14 @@ def transform(image, mask, image_size=224):
     image = resize(image)
     mask = resize(mask)
 
-    # if random() > 0.5:
-    #     image = TF.vflip(image)
-    #     mask = TF.vflip(mask)
-
-    # if random() > 0.5:
-    #     image = TF.hflip(image)
-    #     mask = TF.hflip(mask)
-
-    # angle = random() * 12 - 6
-    # image = TF.rotate(image, angle)
-    # mask = TF.rotate(mask, angle)
-
-    # pad_size = random() * image_size
-    # image = TF.pad(image, pad_size, padding_mode='edge')
-    # mask = TF.pad(mask, pad_size, padding_mode='edge')
+    mask = TF.to_grayscale(mask)
 
     # Transform to tensor
     image = TF.to_tensor(image)
     mask = TF.to_tensor(mask)
 
     # Normalize Data
-    image = TF.normalize(image, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    image = TF.normalize(image, [0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
 
     return image, mask
 
@@ -45,7 +31,7 @@ class Dataset(torch.utils.data.Dataset):
             raise Exception(f"[!] {self.data_folder} not exists.")
 
         self.objects_path = []
-        self.image_name = os.listdir(os.path.join(data_folder, "images"))
+        self.image_name = check_data(data_folder)
         if len(self.image_name) == 0:
             raise Exception(f"No image found in {self.image_name}")
         for p in os.listdir(data_folder):
