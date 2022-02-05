@@ -131,7 +131,7 @@ class Trainer:
             return
 
         print('Load Best Model')
-        ckpt = f'{self.checkpoint_dir}/mobilenetv2.pt'
+        ckpt = f'{self.checkpoint_dir}/best.pt'
         save_info = torch.load(ckpt, map_location=self.device)
         self.net = save_info['model']
         self.net.load_state_dict(save_info['state_dict'])
