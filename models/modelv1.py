@@ -2,8 +2,9 @@ import torch.nn as nn
 
 from .blocks import LayerDepwiseDecode, LayerDepwiseEncode
 
+
 class MobileHairNet(nn.Module):
-    def __init__(self, encode_block=LayerDepwiseEncode, decode_block=LayerDepwiseDecode, mobilenet_block=None, *args, **kwargs):
+    def __init__(self, encode_block=LayerDepwiseEncode, decode_block=LayerDepwiseDecode, *args, **kwargs):
         super(MobileHairNet, self).__init__()
         self.encode_block = encode_block
         self.decode_block = decode_block

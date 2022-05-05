@@ -1,12 +1,9 @@
 import cv2
 import torch
-from models.quantization.modelv2 import QuantizableMobileHairNetV2
-from utils.util import quantize_model
-import os
 import numpy as np
-from glob import glob
 import argparse
 
+from models import *
 
 
 def get_mask(image, net, size=224):
@@ -26,9 +23,11 @@ def get_mask(image, net, size=224):
 
     return mask_cv2
 
+
 def load_model(model_path=None, quantize=False, device=torch.device('cpu')):
     if not model_path:
-        model_path = f'param/quantized.pt' if quantize else f'param/best.pt'
+        return modelv2(train=False, pretrained=True, device=device)
+
     print(f'[*] Load Model from {model_path}')
     save_info = torch.load(model_path, map_location=device)
     # save_info = {'model': net, 'state_dict': net.state_dict(), 'optimizer' : optimizer.state_dict()} 

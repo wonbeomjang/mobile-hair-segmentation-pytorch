@@ -24,11 +24,12 @@ class LayerDepwiseEncode(nn.Module):
 class LayerDepwiseDecode(nn.Module):
     def __init__(self, in_channel, out_channel, kernel_size=3,  stride=1):
         super(LayerDepwiseDecode, self).__init__()
-        self.layer = nn.Sequential(
+        block = [
             nn.Conv2d(in_channels=in_channel, out_channels=in_channel, kernel_size=kernel_size, stride=stride, padding=1, groups=in_channel),
             nn.Conv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=1, stride=stride),
             nn.ReLU(inplace=True)
-        )
+        ]
+        self.layer = nn.Sequential(*block)
 
     def forward(self, x):
         out = self.layer(x)

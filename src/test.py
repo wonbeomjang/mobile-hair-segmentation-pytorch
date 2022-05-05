@@ -24,11 +24,11 @@ class Tester:
         self.load_model()
         
     def load_model(self):
-        ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/best.pt'
+        ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/best.pth'
         print(f'[*] Load Model from {ckpt}')
 
         if self.quantize:
-            self.net = torch.jit.load(ckpt)
+            self.net = torch.jit.load(ckpt, map_location=self.device)
         else:
             save_info = torch.load(ckpt, map_location=self.device)
             self.net = save_info['model']
@@ -37,7 +37,7 @@ class Tester:
     def test(self, net=None):
         if net:
             self.net = net
-
+        self.net = self.net.eval()
         avg_meter = AverageMeter()
         with torch.no_grad():
             unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))

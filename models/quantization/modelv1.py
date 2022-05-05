@@ -9,17 +9,17 @@ from torchvision.models.quantization.mobilenetv2 import QuantizableInvertedResid
 from torchvision.ops.misc import ConvNormActivation
 
 from ..modelv1 import MobileHairNet
-from .blocks import QuantizableLayerDepwiseDecode, QuantizableLayerDepwiseEncode
+from .blocks import QuantizableLayerDepwiseDecode, QuantizableLayerDepwiseEncode, QuantizeUpSample
 
 
 class QuantizableMobileHairNet(MobileHairNet):
-    def __init__(self, decode_block=QuantizableLayerDepwiseDecode, *args, **kwargs):
+    def __init__(self):
         super(QuantizableMobileHairNet, self).__init__(encode_block=QuantizableLayerDepwiseEncode, decode_block=QuantizableLayerDepwiseDecode)
         
         self.quant = torch.quantization.QuantStub()
         self.dequant = torch.quantization.DeQuantStub()
         self.f_add = FloatFunctional()
-        
+
     def forward(self, x):
         x = self.quant(x)
         x = self._forward_implement(x)
@@ -48,7 +48,7 @@ class QuantizableMobileHairNet(MobileHairNet):
 
         out = decode_layer5
         return out
-        
+
     def fuse_model(self) -> None:
         for m in self.modules():
             if type(m) is ConvNormActivation:
