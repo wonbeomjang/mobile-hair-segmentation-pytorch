@@ -60,3 +60,12 @@ class QuantizableMobileHairNetV2(MobileHairNetV2):
                 fuse_modules(m, ["0", "1", "2"], inplace=True)
             if type(m) is QuantizableInvertedResidual and type(m) is QuantizableLayerDepwiseDecode:
                 m.fuse_model()
+
+    def quantize(self) -> None:
+        self.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+        self.eval()
+        self.fuse_model()
+        self.train()
+        torch.quantization.prepare_qat(self, inplace=True)
+        torch.quantization.convert(self, inplace=True)
+

@@ -34,27 +34,12 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def quantize_model(model: nn.Module, backend: str) -> None:
-    _dummy_input_data = torch.rand(1, 3, 224, 224)
-    if backend not in torch.backends.quantized.supported_engines:
-        raise RuntimeError("Quantized backend not supported ")
-    torch.backends.quantized.engine = backend
-    model.eval()
-    # Make sure that weight qconfig matches that of the serialized models
-    if backend == "fbgemm":
-        model.qconfig = torch.ao.quantization.qconfig.QConfig(  # type: ignore[assignment]
-            activation=torch.ao.quantization.observer.default_observer,
-            weight=torch.ao.quantization.observer.default_per_channel_weight_observer,
-        )
-    elif backend == "qnnpack":
-        model.qconfig = torch.ao.quantization.qconfig.QConfig(  # type: ignore[assignment]
-            activation=torch.ao.quantization.observer.default_observer, weight=torch.ao.quantization.default_weight_observer
-        )
+def quantize_model(net: nn.Module) -> nn.Module:
+    net.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+    net.eval()
+    net.fuse_model()
+    net.train()
+    net = torch.quantization.prepare_qat(net)
+    net = torch.quantization.convert(net)
 
-    # TODO https://github.com/pytorch/vision/pull/4232#pullrequestreview-730461659
-    model.fuse_model()  # type: ignore[operator]
-    torch.ao.quantization.prepare(model, inplace=True)
-    model(_dummy_input_data)
-    torch.ao.quantization.convert(model, inplace=True)
-
-    return
+    return net

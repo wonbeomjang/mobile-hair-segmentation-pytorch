@@ -78,7 +78,7 @@ class Trainer:
             return
 
         ckpt = f'{self.checkpoint_dir}/last.pth' if self.resume else self.model_path
-        save_info = torch.load(ckpt, map_location=self.device)
+        save_info: dict = torch.load(ckpt, map_location=self.device)
         run_id = save_info['run_id'] if 'run_id' in save_info else None
         self.run = wandb.init(id=run_id, project='hair_segmentation', resume="allow", dir=os.getcwd())
 
@@ -137,8 +137,8 @@ class Trainer:
         if not self.quantize:
             return
 
-        print('Load Best Model')
         ckpt = f'{self.checkpoint_dir}/best.pth'
+        print(f'[*] Load Best Model in {ckpt}')
         save_info = torch.load(ckpt, map_location=self.device)
         # self.net = save_info['model']
         self.net.load_state_dict(save_info['state_dict'])
@@ -156,7 +156,9 @@ class Trainer:
         image_gradient_criterion.device = self.device
 
         self.net.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+        self.net.eval()
         self.net.fuse_model()
+        self.net.train()
         self.net = torch.quantization.prepare_qat(self.net)
 
         temp = self.num_epoch
@@ -171,19 +173,21 @@ class Trainer:
         self.device = torch.device('cpu')
         self.net = self.net.eval().to(self.device)
         image_gradient_criterion.device = self.device
-        torch.quantization.convert(self.net, inplace=True)
+        self.net = torch.quantization.convert(self.net)
 
         print('After quantize')
         self.device = torch.device('cpu')
         self.val(image_gradient_criterion, bce_criterion)
 
-        # save_info = {'model': self.net, 'state_dict': self.net.state_dict()}
-        # torch.save(save_info, f'{self.checkpoint_dir}/quantized.pth')
+        save_info = {'model': self.net, 'state_dict': self.net.state_dict()}
+        torch.save(save_info, f'{self.checkpoint_dir}/quantized.pth')
 
-        torch.jit.script(self.net).save(f'{self.checkpoint_dir}/quantized.pt')
+        net = torch.jit.script(self.net)
+        print("[*] Save quantized model")
+        torch.jit.save(net, f'{self.checkpoint_dir}/quantized.pt')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        return self.net
+        return net
 
     def _train_one_epoch(self, epoch, image_gradient_criterion, bce_criterion, quantize=False):
         bce_losses = AverageMeter()
