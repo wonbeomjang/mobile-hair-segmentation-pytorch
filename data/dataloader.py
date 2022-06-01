@@ -96,12 +96,13 @@ class Dataset(torch.utils.data.Dataset):
         return len(self.image_name)
 
 
-def get_loader(data_folder, batch_size, image_size, shuffle, num_workers):
+def get_loader(data_folder, batch_size, image_size, shuffle, num_workers, seed=100):
     dataset = Dataset(data_folder, image_size)
 
-    dataset, val_set = torch.utils.data.random_split(dataset,
-                                                     [int(len(dataset) * 0.95),
-                                                      len(dataset) - int(len(dataset) * 0.95)])
+    dataset, val_set = torch.utils.data.random_split(dataset, [int(len(dataset) * 0.95),
+                                                               len(dataset) - int(len(dataset) * 0.95)
+                                                               ],
+                                                     generator=torch.Generator().manual_seed(seed))
 
     data_loader = torch.utils.data.DataLoader(dataset=dataset,
                                               batch_size=batch_size,

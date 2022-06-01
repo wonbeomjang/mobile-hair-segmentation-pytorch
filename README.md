@@ -17,6 +17,17 @@ And add additional loss function to capture fine hair texture.
 pip install -r requirements.txt
 ```
 
+## model performance
+|                        | IOU (%) | inference speed; batch size:0 (ms) | inference speed; batch size:32 (ms) | model size (MB) |
+|:----------------------:|:-------:|:----------------------------------:|:-----------------------------------:|:---------------:|
+| version1 (MobilenetV1) |  92.48  |                 10                 |                 2372                |      15.61      |
+|  quatization version 1 |  91.51  |                 50                 |                 1682                |       4.40      |
+| version2 (MobilenetV2) |  93.21  |                 16                 |                 2461                |      15.27      |
+| quantization version 2 |  92.90  |                 37                 |                 754                 |       6.88      |
+
+![network_architecture](./image/sample_image.PNG)
+![network_architecture](./image/webcam.gif)
+
 ## preparing datsets
 make directory like this
 ```
@@ -67,17 +78,6 @@ python main.py --num_epoch [NUM_EPOCH] --model_version [1~2] --resume
 ```
 python main.py --num_epoch [NUM_EPOCH] --model_version [1~2] --model_path [MODEL_PATH]
 ```
-
-``` python
-from src.train import Trainer
-from data.dataloader import get_loader
-from config.config import get_config
-
-config = get_config()
-data_loader = get_loader(config.data_path, config.batch_size, config.image_size,
-                        shuffle=True, num_workers=int(config.workers))
-trainer = Trainer(config, data_loader)
-```
 ## Test
 ```bash
 python webcam.py --model_path [MODEL_PATH]
@@ -87,7 +87,16 @@ if you want to use quantized model
 python webcam.py --model_path [MODEL_PATH] --quantize
 ```
 
-## Overall result
+## Load model
+All you have to do is copy ./model and use it
 
-![network_architecture](./image/sample_image.PNG)
-![network_architecture](./image/webcam.gif)
+ex)
+```python
+import torch
+from models import quantized_modelv2
+
+quantize = False
+device = torch.device("cuda:0" if torch.cuda.is_available() and not quantize else "cpu")
+quantized_modelv2(pretrained=True, device=device).to(device)
+```
+

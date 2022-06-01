@@ -9,8 +9,7 @@ from tqdm import tqdm
 from torch.optim.adadelta import Adadelta
 from torch.optim.lr_scheduler import OneCycleLR
 
-from models.modelv1 import MobileHairNet
-from models.modelv2 import MobileHairNetV2
+from models import *
 from models.quantization.modelv1 import QuantizableMobileHairNet
 from models.quantization.modelv2 import QuantizableMobileHairNetV2
 from loss.loss import ImageGradientLoss, iou_loss
@@ -26,7 +25,8 @@ class Trainer:
         self.lr_scheduler = None
         self.optimizer = None
         self.data_loader, self.val_loader = get_loader(config.data_path, config.batch_size, config.image_size,
-                                                       shuffle=True, num_workers=int(config.workers))
+                                                       shuffle=True, num_workers=int(config.workers),
+                                                       seed=config.manual_seed)
         self.batch_size = config.batch_size
         self.config = config
         self.lr = config.lr
@@ -47,20 +47,21 @@ class Trainer:
         self.rho = config.rho
         self.decay = config.decay
         self.num_quantize_train = config.num_quantize_train
+        self.loss = float('inf')
 
         self.build_model()
 
     def build_model(self):
         if self.model_version == 1:
             if self.quantize:
-                self.net = QuantizableMobileHairNet().to(self.device)
+                self.net = quantized_modelv1(device=self.device).to(self.device)
             else:
-                self.net = MobileHairNet().to(self.device)
+                self.net = modelv1(device=self.device).to(self.device)
         elif self.model_version == 2:
             if self.quantize:
-                self.net = QuantizableMobileHairNetV2().to(self.device)
+                self.net = quantized_modelv2(device=self.device).to(self.device)
             else:
-                self.net = MobileHairNetV2().to(self.device)
+                self.net = modelv2(device=self.device).to(self.device)
 
         else:
             raise Exception('[!] Unexpected model version')
@@ -76,8 +77,8 @@ class Trainer:
             self.run = wandb.init(project='hair_segmentation', dir=os.getcwd())
             return
 
-        ckpt = f'{self.checkpoint_dir}/last.pt' if self.resume else self.model_path
-        save_info = torch.load(ckpt, map_location=self.device)
+        ckpt = f'{self.checkpoint_dir}/last.pth' if self.resume else self.model_path
+        save_info: dict = torch.load(ckpt, map_location=self.device)
         run_id = save_info['run_id'] if 'run_id' in save_info else None
         self.run = wandb.init(id=run_id, project='hair_segmentation', resume="allow", dir=os.getcwd())
 
@@ -86,9 +87,8 @@ class Trainer:
         # except ValueError:
         #     print(traceback.format_exc())
         #     print(f"[!] {ckpt} is not exist in wandb")
-
         self.epoch = save_info['epoch'] + 1
-        self.net = save_info['model']
+        # self.net = save_info['model']
 
         self.optimizer = Adadelta(self.net.parameters(), lr=self.lr, eps=self.eps, rho=self.rho,
                                   weight_decay=self.decay)
@@ -98,42 +98,49 @@ class Trainer:
         self.optimizer.load_state_dict(save_info['optimizer'])
         self.net.load_state_dict(save_info['state_dict'])
         self.lr_scheduler.load_state_dict(save_info['lr_scheduler'])
+        self.loss = save_info['loss']
 
         print(f"[*] Load Model from {ckpt}")
 
     def train(self):
         image_gradient_criterion = ImageGradientLoss().to(self.device)
         bce_criterion = nn.CrossEntropyLoss().to(self.device)
-        best = 0
+        best = self.loss
 
         for epoch in range(self.epoch, self.num_epoch):
             results = self._train_one_epoch(epoch, image_gradient_criterion, bce_criterion)
 
+            save_info = {'model': self.net, 'state_dict': self.net.state_dict(),
+                         'optimizer': self.optimizer.state_dict(), 'epoch': epoch,
+                         'lr_scheduler': self.lr_scheduler.state_dict(), 'run_id': self.run.id,
+                         'loss': results["train/loss"]}
+
             if self.val_loader:
                 val_results = self.val(image_gradient_criterion, bce_criterion)
                 results.update(val_results)
-                iou = val_results["val/iou"]
+                save_info['loss'] = val_results["val/loss"]
 
-                if iou > best:
-                    best = iou
-                    save_info = {'model': self.net, 'state_dict': self.net.state_dict(),
-                                 'optimizer': self.optimizer.state_dict(), 'epoch': epoch,
-                                 'lr_scheduler': self.lr_scheduler.state_dict(), 'run_id': self.run.id}
-                    torch.save(save_info, f'{self.checkpoint_dir}/best.pt')
-                    wandb.save(f'{self.checkpoint_dir}/best.pt', './', 'now')
+                if save_info['loss'] < best:
+                    best = save_info['loss']
+                    torch.save(save_info, f'{self.checkpoint_dir}/best.pth')
+                    wandb.save(f'{self.checkpoint_dir}/best.pth', './', 'now')
+                    torch.jit.script(self.net).save(f'{self.checkpoint_dir}/best.pt')
 
+            torch.save(save_info, f'{self.checkpoint_dir}/last.pth')
+            wandb.save(f'{self.checkpoint_dir}/last.pth', './')
             wandb.log(results)
-        print(f'Final IOU: {best:.4f}')
+
+        print(f'Final Loss: {best:.4f}')
         self.run.finish()
 
     def quantize_model(self):
         if not self.quantize:
             return
 
-        print('Load Best Model')
-        ckpt = f'{self.checkpoint_dir}/best.pt'
+        ckpt = f'{self.checkpoint_dir}/best.pth'
+        print(f'[*] Load Best Model in {ckpt}')
         save_info = torch.load(ckpt, map_location=self.device)
-        self.net = save_info['model']
+        # self.net = save_info['model']
         self.net.load_state_dict(save_info['state_dict'])
 
         print('Before quantize')
@@ -149,7 +156,9 @@ class Trainer:
         image_gradient_criterion.device = self.device
 
         self.net.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+        self.net.eval()
         self.net.fuse_model()
+        self.net.train()
         self.net = torch.quantization.prepare_qat(self.net)
 
         temp = self.num_epoch
@@ -164,16 +173,21 @@ class Trainer:
         self.device = torch.device('cpu')
         self.net = self.net.eval().to(self.device)
         image_gradient_criterion.device = self.device
-        torch.quantization.convert(self.net, inplace=True)
+        self.net = torch.quantization.convert(self.net)
 
         print('After quantize')
         self.device = torch.device('cpu')
         self.val(image_gradient_criterion, bce_criterion)
+
+        save_info = {'model': self.net, 'state_dict': self.net.state_dict()}
+        torch.save(save_info, f'{self.checkpoint_dir}/quantized.pth')
+
+        net = torch.jit.script(self.net)
+        print("[*] Save quantized model")
+        torch.jit.save(net, f'{self.checkpoint_dir}/quantized.pt')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        torch.jit.save(torch.jit.script(self.net), f'{self.checkpoint_dir}/quantized.pt')
-
-        return self.net
+        return net
 
     def _train_one_epoch(self, epoch, image_gradient_criterion, bce_criterion, quantize=False):
         bce_losses = AverageMeter()
@@ -213,12 +227,6 @@ class Trainer:
             pbar.set_description(f"Epoch: [{epoch}/{self.num_epoch}] | Bce Loss: {bce_losses.avg:.4f} | "
                                  f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou_avg.avg:.4f}")
 
-        if not quantize:
-            save_info = {'model': self.net, 'state_dict': self.net.state_dict(),
-                         'optimizer': self.optimizer.state_dict(), 'epoch': epoch,
-                         'lr_scheduler': self.lr_scheduler.state_dict(), 'run_id': self.run.id}
-            torch.save(save_info, f'{self.checkpoint_dir}/last.pt')
-            wandb.save(f'{self.checkpoint_dir}/last.pt', './')
         if image is not None:
             img = torch.cat(
                 [image[0], mask[0].repeat(3, 1, 1), pred[0].argmax(dim=0).unsqueeze(dim=0).repeat(3, 1, 1)], dim=2)
@@ -230,8 +238,8 @@ class Trainer:
 
     def val(self, image_gradient_criterion, bce_criterion):
         self.net = self.net.eval()
-        torch.save(self.net.state_dict(), "tmp.pt")
-        model_size = "%.2f MB" % (os.path.getsize("tmp.pt") / 1e6)
+        torch.save(self.net.state_dict(), "tmp.pth")
+        model_size = "%.2f MB" % (os.path.getsize("tmp.pth") / 1e6)
         results = {}
         with torch.no_grad():
             bce_losses = AverageMeter()
@@ -268,7 +276,7 @@ class Trainer:
                                      f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou:.4f} | "
                                      f"Model Size: {model_size} | Infernece Speed: {inference_avg.avg:.4f}")
 
-        os.remove("tmp.pt")
+        os.remove("tmp.pth")
         self.net = self.net.train()
         results["val/iou"] = iou_avg.avg
         results["val/loss"] = bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight

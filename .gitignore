@@ -1,7 +1,7 @@
 .idea
 __pycache__
 dataset
-checkpoints
+checkpoints*
 samples
 image_preprocess.py
 results.csv

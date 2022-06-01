@@ -1,10 +1,13 @@
+import time
+
 import torch
 import os
 from tqdm import tqdm
 from torchvision.utils import save_image
 from utils.custom_transfrom import UnNormalize
-from utils.util import AverageMeter
+from utils.util import AverageMeter, quantize_model
 from loss.loss import iou_loss
+from models import *
 
 
 class Tester:
@@ -19,38 +22,58 @@ class Tester:
         self.sample_dir = config.sample_dir
         self.checkpoint_dir = config.checkpoint_dir
         self.quantize = config.quantize
+        self.model_version = config.model_version
         if self.quantize:
             self.device = torch.device('cpu')
+        self.build_model()
+
+    def build_model(self):
+        if self.model_version == 1:
+            if self.quantize:
+                self.net = quantized_modelv1(device=self.device).to(self.device)
+            else:
+                self.net = modelv1(device=self.device).to(self.device)
+        elif self.model_version == 2:
+            if self.quantize:
+                self.net = quantized_modelv2(device=self.device).to(self.device)
+            else:
+                self.net = modelv2(device=self.device).to(self.device)
+        else:
+            raise Exception('[!] Unexpected model version')
         self.load_model()
         
     def load_model(self):
-        ckpt = f'{self.checkpoint_dir}/quantized.pt' if self.quantize else f'{self.checkpoint_dir}/best.pt'
+        ckpt = f'{self.checkpoint_dir}/quantized.pth' if self.quantize else f'{self.checkpoint_dir}/best.pth'
         print(f'[*] Load Model from {ckpt}')
-
+        save_info = torch.load(ckpt, map_location=self.device)
         if self.quantize:
-            self.net = torch.jit.load(ckpt)
-        else:
-            save_info = torch.load(ckpt, map_location=self.device)
-            self.net = save_info['model']
-            self.net.load_state_dict(save_info['state_dict'])
+            self.net.quantize()
+        self.net.load_state_dict(save_info['state_dict'])
 
     def test(self, net=None):
         if net:
             self.net = net
-
+        self.net = self.net.eval()
         avg_meter = AverageMeter()
+        inference_avg = AverageMeter()
+        torch.save(self.net.state_dict(), "tmp.pth")
+        model_size = "%.2f MB" % (os.path.getsize("tmp.pth") / 1e6)
+        os.remove("tmp.pth")
         with torch.no_grad():
             unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
             for step, (image, mask) in pbar:
                 image = image.to(self.device)
                 #image = unnormal(image.to(self.device))
+                cur = time.time()
                 result = self.net(image)
+                inference_avg.update(time.time() - cur)
 
                 mask = mask.to(self.device)
 
                 avg_meter.update(iou_loss(result, mask))
-                pbar.set_description(f'IOU: {avg_meter.avg:.4f}')
+                pbar.set_description(f"IOU: {avg_meter.avg:.4f} | "
+                                     f"Model Size: {model_size} | Infernece Speed: {inference_avg.avg:.4f}")
 
                 mask = mask.repeat_interleave(3, 1)
                 argmax = torch.argmax(result, dim=1).unsqueeze(dim=1)
@@ -58,7 +81,6 @@ class Tester:
                 result = result * argmax
                 result = result.repeat_interleave(3, 1)
                 torch.cat([image, result, mask])
-
 
                 save_image(torch.cat([image, result, mask]), os.path.join(self.sample_dir, f"{step}.png"))
 

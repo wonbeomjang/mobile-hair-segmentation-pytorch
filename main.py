@@ -29,18 +29,18 @@ def main(config):
 
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
+    net = None
     if not config.test:
         trainer = Trainer(config)
         trainer.train()
     
         if config.quantize:
-            net = trainer.quantize_model()
+            trainer.quantize_model()
 
     test_loader = data.test_loader.get_loader(config.test_data_path, config.test_batch_size, config.image_size,
                                               shuffle=None, num_workers=int(config.workers))
     tester = Tester(config, test_loader)
-    tester.test()
+    tester.test(net)
 
 
 if __name__ == "__main__":

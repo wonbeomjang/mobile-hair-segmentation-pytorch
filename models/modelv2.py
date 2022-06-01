@@ -5,7 +5,7 @@ from .blocks import LayerDepwiseDecode
 
 
 class MobileHairNetV2(nn.Module):
-    def __init__(self, decode_block=LayerDepwiseDecode, mobilenet_block=None, *args, **kwargs):
+    def __init__(self, decode_block=LayerDepwiseDecode, *args, **kwargs):
         super(MobileHairNetV2, self).__init__()
         self.mobilenet = mobilenet_v2(*args, **kwargs)
         self.decode_block = decode_block
