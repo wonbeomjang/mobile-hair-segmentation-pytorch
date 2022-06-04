@@ -18,12 +18,12 @@ pip install -r requirements.txt
 ```
 
 ## model performance
-|                        | IOU (%) | inference speed; batch size:0 (ms) | inference speed; batch size:32 (ms) | model size (MB) |
-|:----------------------:|:-------:|:----------------------------------:|:-----------------------------------:|:---------------:|
-| version1 (MobilenetV1) |  92.48  |                 10                 |                 2372                |      15.61      |
-|  quatization version 1 |  91.51  |                 50                 |                 1682                |       4.40      |
-| version2 (MobilenetV2) |  93.21  |                 16                 |                 2461                |      15.27      |
-| quantization version 2 |  92.90  |                 37                 |                 754                 |       6.88      |
+|                        | IOU (%) | inference speed (ms) | model size (MB) |
+|:----------------------:|:-------:|:--------=========---:|:---------------:|
+| version1 (MobilenetV1) |  92.48  |         92           |      15.61      |
+|  quatization version 1 |  91.51  |         67           |       4.40      |
+| version2 (MobilenetV2) |  93.21  |         78           |      15.27      |
+| quantization version 2 |  92.90  |         39           |       6.88      |
 
 ![network_architecture](./image/sample_image.PNG)
 ![network_architecture](./image/webcam.gif)
