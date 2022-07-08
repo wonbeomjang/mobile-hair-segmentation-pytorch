@@ -54,14 +54,14 @@ class Trainer:
     def build_model(self):
         if self.model_version == 1:
             if self.quantize:
-                self.net = quantized_modelv1(device=self.device).to(self.device)
+                self.net = quantized_modelv1().to(self.device)
             else:
-                self.net = modelv1(device=self.device).to(self.device)
+                self.net = modelv1().to(self.device)
         elif self.model_version == 2:
             if self.quantize:
-                self.net = quantized_modelv2(device=self.device).to(self.device)
+                self.net = quantized_modelv2().to(self.device)
             else:
-                self.net = modelv2(device=self.device).to(self.device)
+                self.net = modelv2().to(self.device)
 
         else:
             raise Exception('[!] Unexpected model version')
