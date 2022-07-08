@@ -17,14 +17,12 @@ model_map = {'hairmattenetv1': MobileHairNet,
              'quantized_hairmattenetv2': QuantizableMobileHairNetV2}
 
 
-def _model(arch: str, pretrained: bool, device=None, quantize=False):
+def _model(arch: str, pretrained: bool, quantize=False):
     print(f"[*] Load {arch}")
-    device = device if device is not None else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model: nn.Module = model_map[arch]()
 
     if pretrained:
-        model = model.to(device)
-        state_dict = torch.utils.model_zoo.load_url(url_map[arch], map_location=device)
+        state_dict = torch.utils.model_zoo.load_url(url_map[arch])
         if quantize:
             model.quantize()
         model.load_state_dict(state_dict)
