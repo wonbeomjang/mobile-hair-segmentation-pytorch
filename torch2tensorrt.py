@@ -11,7 +11,8 @@ from loss.loss import iou_loss
 
 
 def convert_tensrrt(net):
-    trt_ts_module = torch_tensorrt.compile(torch.jit.script(net),
+    trace_model = torch.jit.script(net)
+    trt_ts_module = torch_tensorrt.compile(trace_model,
                                            inputs=[torch_tensorrt.Input([1, 3, 224, 224], dtype=torch.float32)],
                                            enabled_precisions={torch.float32},
                                            )
