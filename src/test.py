@@ -5,7 +5,7 @@ import os
 from tqdm import tqdm
 from torchvision.utils import save_image
 from utils.custom_transfrom import UnNormalize
-from utils.util import AverageMeter, quantize_model
+from utils.util import AverageMeter, get_model_size
 from loss.loss import iou_loss
 from models import *
 
@@ -58,12 +58,10 @@ class Tester:
         self.net = self.net.eval()
         avg_meter = AverageMeter()
         inference_avg = AverageMeter()
-        torch.save(self.net.state_dict(), "tmp.pth")
-        model_size = "%.2f MB" % (os.path.getsize("tmp.pth") / 1e6)
-        os.remove("tmp.pth")
         with torch.no_grad():
             unnormal = UnNormalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             pbar = tqdm(enumerate(self.data_loader), total=len(self.data_loader))
+            model_size = get_model_size(self.net)
             for step, (image, mask) in pbar:
                 image = image.to(self.device)
                 #image = unnormal(image.to(self.device))
@@ -75,7 +73,7 @@ class Tester:
 
                 avg_meter.update(iou_loss(result, mask))
                 pbar.set_description(f"IOU: {avg_meter.avg:.4f} | "
-                                     f"Model Size: {model_size} | Infernece Speed: {inference_avg.avg:.4f}")
+                                     f"Model Size: {model_size:.2f}MB | Infernece Speed: {inference_avg.avg:.4f}")
 
                 mask = mask.repeat_interleave(3, 1)
                 argmax = torch.argmax(result, dim=1).unsqueeze(dim=1)

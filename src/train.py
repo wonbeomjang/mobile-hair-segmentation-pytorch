@@ -13,7 +13,7 @@ from models import *
 from models.quantization.modelv1 import QuantizableMobileHairNet
 from models.quantization.modelv2 import QuantizableMobileHairNetV2
 from loss.loss import ImageGradientLoss, iou_loss
-from utils.util import AverageMeter
+from utils.util import AverageMeter, get_model_size
 
 from data.dataloader import get_loader
 
@@ -238,8 +238,8 @@ class Trainer:
 
     def val(self, image_gradient_criterion, bce_criterion):
         self.net = self.net.eval()
-        torch.save(self.net.state_dict(), "tmp.pth")
-        model_size = "%.2f MB" % (os.path.getsize("tmp.pth") / 1e6)
+
+        model_size = get_model_size(self.net)
         results = {}
         with torch.no_grad():
             bce_losses = AverageMeter()
@@ -274,9 +274,8 @@ class Trainer:
 
                 pbar.set_description(f"Validate... Bce Loss: {bce_losses.avg:.4f} | "
                                      f"Image Gradient Loss: {image_gradient_losses.avg:.4f} | IOU: {iou:.4f} | "
-                                     f"Model Size: {model_size} | Infernece Speed: {inference_avg.avg:.4f}")
+                                     f"Model Size: {model_size:.2f}MB | Infernece Speed: {inference_avg.avg:.4f}")
 
-        os.remove("tmp.pth")
         self.net = self.net.train()
         results["val/iou"] = iou_avg.avg
         results["val/loss"] = bce_losses.avg + image_gradient_losses.avg * self.gradient_loss_weight

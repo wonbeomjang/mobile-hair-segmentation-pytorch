@@ -30,17 +30,21 @@ def _model(arch: str, pretrained: bool, quantize=False):
     return model
 
 
-def modelv1(pretrained=False, device=None):
-    return _model('hairmattenetv1', pretrained, device)
+def modelv1(pretrained=False):
+    return _model('hairmattenetv1', pretrained)
 
 
-def modelv2(pretrained=False, device=None):
-    return _model('hairmattenetv2', pretrained, device)
+def modelv2(pretrained=False):
+    return _model('hairmattenetv2', pretrained)
 
 
-def quantized_modelv1(pretrained=False, device=None):
-    return _model('quantized_hairmattenetv1', pretrained, device, True)
+def quantized_modelv1(pretrained=False):
+    return _model('quantized_hairmattenetv1', pretrained, True)
 
 
-def quantized_modelv2(pretrained=False, device=None):
-    return _model('quantized_hairmattenetv2', pretrained, device, True)
+def quantized_modelv2(pretrained=False):
+    return _model('quantized_hairmattenetv2', pretrained, True)
+
+
+def get_model(name: str):
+    return _model(name, True, True if name.startswith("quantized") else False)

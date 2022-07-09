@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 import math
+import os
+
 
 class LambdaLR:
     def __init__(self, n_epoch, offset, total_batch_size, decay_batch_size):
@@ -43,3 +45,18 @@ def quantize_model(net: nn.Module) -> nn.Module:
     net = torch.quantization.convert(net)
 
     return net
+
+
+def get_model_size(net: nn.Module) -> float:
+    """
+    Get model size
+    input:
+        net: nn.Module -> deep learning model
+    output:
+        float: model parameter size calculated by MB.
+    """
+    torch.save(net.state_dict(), "tmp.pth")
+    model_size = os.path.getsize("tmp.pth") / 1e6
+    os.remove("tmp.pth")
+    return model_size
+
