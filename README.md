@@ -17,13 +17,13 @@ And add additional loss function to capture fine hair texture.
 pip install -r requirements.txt
 ```
 
-## model performance
-|                        | IOU (%) | inference speed (ms) | model size (MB) |
-|:----------------------:|:-------:|:--------------------:|:---------------:|
-| version1 (MobilenetV1) |  92.48  |          92          |      15.61      |
-|  quatization version 1 |  91.51  |          64          |       4.40      |
-| version2 (MobilenetV2) |  93.21  |          78          |      15.27      |
-| quantization version 2 |  92.90  |          39          |       6.88      |
+## model performance (on cpu)
+|                         | IOU (%) | inference speed (ms) | model size (MB) |
+|:-----------------------:|:-------:|:--------------------:|:---------------:|
+| version1 (MobilenetV1)  |  92.48  |         370          |      15.61      |
+| quantization version 1  |  91.51  |         202          |       4.40      |
+| version2 (MobilenetV2)  |  93.21  |         377          |      15.27      |
+| quantization version 2  |  92.90  |         170          |       6.88      |
 
 ![network_architecture](./image/sample_image.PNG)
 ![network_architecture](./image/webcam.gif)
@@ -100,3 +100,26 @@ device = torch.device("cuda:0" if torch.cuda.is_available() and not quantize els
 quantized_modelv2(pretrained=True, device=device).to(device)
 ```
 
+## Deploy TensorRT
+
+### Run docker
+The dependency libraries in the container can be found in the [release notes](https://docs.nvidia.com/deeplearning/tensorrt/container-release-notes/running.html).
+```bash
+docker pull nvcr.io/nvidia/tensorrt:<xx.xx>-py<x>
+docker run --gpus all -it --rm -v local_dir:container_dir nvcr.io/nvidia/tensorrt:<xx.xx>-py<x>
+```
+
+### run torch2tensorrt.py
+```bash
+pip install -r requirements.txt
+pip install torch-tensorrt -f https://github.com/pytorch/TensorRT/releases
+python torch2tensorrt.py -model_version [1~2]
+```
+
+## tensorrt performance
+|                        | IOU (%) | inference speed (ms) | model size (KB) |
+|:----------------------:|:-------:|:--------------------:|:---------------:|
+| version1 (MobilenetV1) |  92.48  |          49          |      15.61      |
+|  TensorRT on version1  |  92.48  |          5           |      15.61      |
+| version2 (MobilenetV2) |  93.21  |          72          |      15.27      |
+|  TensorRT on version2  |  93.21  |          8           |      0.495      |
