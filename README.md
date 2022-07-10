@@ -116,7 +116,7 @@ pip install torch-tensorrt -f https://github.com/pytorch/TensorRT/releases
 python torch2tensorrt.py -model_version [1~2]
 ```
 
-## tensorrt performance
+## TensorRt performance
 |                        | IOU (%) | inference speed (ms) | model size (KB) |
 |:----------------------:|:-------:|:--------------------:|:---------------:|
 | version1 (MobilenetV1) |  92.48  |          49          |      15.61      |
