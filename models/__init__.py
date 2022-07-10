@@ -44,7 +44,3 @@ def quantized_modelv1(pretrained=False):
 
 def quantized_modelv2(pretrained=False):
     return _model('quantized_hairmattenetv2', pretrained, True)
-
-
-def get_model(name: str):
-    return _model(name, True, True if name.startswith("quantized") else False)
