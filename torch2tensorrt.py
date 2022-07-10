@@ -14,14 +14,14 @@ from loss.loss import iou_loss
 def build_model(config):
     if config.model_version == 1:
         if config.quantize:
-            net = quantized_modelv1(pretrained=True).to(config.device)
+            net = quantized_modelv1(pretrained=True)
         else:
-            net = modelv1(pretrained=True).to(config.device)
+            net = modelv1(pretrained=True)
     elif config.model_version == 2:
         if config.quantize:
-            net = quantized_modelv2(pretrained=True).to(config.device)
+            net = quantized_modelv2(pretrained=True)
         else:
-            net = modelv2(pretrained=True).to(config.device)
+            net = modelv2(pretrained=True)
     else:
         raise Exception('[!] Unexpected model version')
     return net
