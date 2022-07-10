@@ -49,7 +49,7 @@ if __name__ == "__main__":
     device = torch.device("cuda:0")
     config = get_config()
 
-    net = get_model("hairmattenetv1").to(device)
+    net = get_model("hairmattenetv1").to(device).eval()
     trt_ts_module = convert_tensrrt(net)
 
     test_loader = data.test_loader.get_loader(config.test_data_path, config.test_batch_size, config.image_size,
