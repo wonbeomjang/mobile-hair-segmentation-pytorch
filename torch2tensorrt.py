@@ -13,27 +13,21 @@ from loss.loss import iou_loss
 
 def build_model(config):
     if config.model_version == 1:
-        if config.quantize:
-            net = quantized_modelv1(pretrained=True)
-        else:
-            net = modelv1(pretrained=True)
+        net = modelv1(pretrained=True)
     elif config.model_version == 2:
-        if config.quantize:
-            net = quantized_modelv2(pretrained=True)
-        else:
-            net = modelv2(pretrained=True)
+        net = modelv2(pretrained=True)
     else:
         raise Exception('[!] Unexpected model version')
     return net
 
 
-def load_model(net, config):
+def load_model(net, config, device):
     ckpt = config.model_path
 
     if not ckpt:
         return net
     print(f'[*] Load Model from {ckpt}')
-    save_info = torch.load(ckpt, map_location=config.device)
+    save_info = torch.load(ckpt, map_location=device)
     if config.quantize:
         net.quantize()
     net.load_state_dict(save_info['state_dict'])
@@ -79,6 +73,7 @@ if __name__ == "__main__":
     config = get_config()
 
     net = build_model(config).to(device).eval()
+    net = load_model(net, config, device)
     trt_ts_module = convert_tensrrt(net)
     
     if os.path.exists(config.test_data_path):

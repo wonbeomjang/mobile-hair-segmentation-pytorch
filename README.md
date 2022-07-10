@@ -103,15 +103,17 @@ quantized_modelv2(pretrained=True, device=device).to(device)
 ## Deploy TensorRT
 
 ### Run docker
-The dependency libraries in the container can be found in the release notes.
+The dependency libraries in the container can be found in the [release notes](https://docs.nvidia.com/deeplearning/tensorrt/container-release-notes/running.html).
 ```bash
-docker build --build-arg BASE=<TENSORRT CONTAINER VERSION e.g. 21.11> -f docker/Dockerfile -t hairmattenet:latest .
-docker run -it --gpus all --name hairmattenet hairmattenet:latest
+docker pull nvcr.io/nvidia/tensorrt:<xx.xx>-py<x>
+docker run --gpus all -it --rm -v local_dir:container_dir nvcr.io/nvidia/tensorrt:<xx.xx>-py<x>
 ```
 
 ### run torch2tensorrt.py
 ```bash
-python torch2tensorrt.py -model_version [1~2] [--quantize]
+pip install -r requirements.txt
+pip install torch-tensorrt -f https://github.com/pytorch/TensorRT/releases
+python torch2tensorrt.py -model_version [1~2]
 ```
 
 ## tensorrt performance
