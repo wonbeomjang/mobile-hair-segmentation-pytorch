@@ -100,3 +100,13 @@ device = torch.device("cuda:0" if torch.cuda.is_available() and not quantize els
 quantized_modelv2(pretrained=True, device=device).to(device)
 ```
 
+## Deploy TensorRT
+
+### Run docker
+The dependency libraries in the container can be found in the release notes.
+```bash
+docker build --build-arg BASE=<TENSORRT CONTAINER VERSION e.g. 21.11> -f docker/Dockerfile -t hairmattenet:latest .
+docker run -it --gpus all --name hairmattenet hairmattenet:latest
+```
+
+### 
