@@ -26,8 +26,8 @@ pip install -r requirements.txt
 
 ### Tip
 if you don't apply quantization some part, you can get better performance  
-delete part on [model1](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv1.py#L57)
-delete part on [model2](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv2.py#L62)
+(delete part on [model1](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv1.py#L57)
+delete part on [model2](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv2.py#L62))
 
 |                         | IOU (%) | inference speed (ms) | model size (MB) |
 |:-----------------------:|:-------:|:--------------------:|:---------------:|
