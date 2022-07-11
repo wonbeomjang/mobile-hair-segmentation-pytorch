@@ -17,14 +17,25 @@ And add additional loss function to capture fine hair texture.
 pip install -r requirements.txt
 ```
 
-## model performance
+## model performance (on CPU)
 |                        | IOU (%) | inference speed (ms) | model size (MB) |
 |:----------------------:|:-------:|:--------------------:|:---------------:|
-| version1 (MobilenetV1) |  92.48  |          92          |      15.61      |
-|  quatization version 1 |  91.51  |          64          |       4.40      |
-| version2 (MobilenetV2) |  93.21  |          78          |      15.27      |
-| quantization version 2 |  92.90  |          39          |       6.88      |
+| version1 (MobilenetV1) |  92.48  |         370          |      15.61      |
+|  quatization version 1 |  85.82  |         154          |      4.40       |
+| version2 (MobilenetV2) |  93.21  |         377          |      15.27      |
+| quantization version 2 |  92.82  |         133          |      6.82       |
 
+### Tip
+if you don't apply quantization some part, you can get better performance  
+delete part on [model1](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv1.py#L57)
+delete part on [model2](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv2.py#L62)
+
+|                         | IOU (%) | inference speed (ms) | model size (MB) |
+|:-----------------------:|:-------:|:--------------------:|:---------------:|
+| version1 (MobilenetV1)  |  92.48  |         370          |      15.61      |
+| quantization version 1  |  91.51  |         175          |       4.40      |
+| version2 (MobilenetV2)  |  93.21  |         377          |      15.27      |
+| quantization version 2  |  92.90  |         155          |       6.88      |
 ![network_architecture](./image/sample_image.PNG)
 ![network_architecture](./image/webcam.gif)
 
