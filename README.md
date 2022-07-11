@@ -35,6 +35,7 @@ delete part on [model2](https://github.com/wonbeomjang/mobile-hair-segmentation-
 | quantization version 1  |  91.51  |         175          |       4.40      |
 | version2 (MobilenetV2)  |  93.21  |         377          |      15.27      |
 | quantization version 2  |  92.90  |         155          |       6.88      |
+
 ![network_architecture](./image/sample_image.PNG)
 ![network_architecture](./image/webcam.gif)
 
