@@ -8,8 +8,8 @@ from .quantization.modelv2 import *
 url_map = {
     'hairmattenetv1': 'https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/releases/download/paramter/hairmattenet_v1.pth',
     'hairmattenetv2': 'https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/releases/download/paramter/hairmattenet_v2.pth',
-    'quantized_hairmattenetv1': 'https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/releases/download/paramter/quantized_hairmattenet_v1.pth',
-    'quantized_hairmattenetv2': 'https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/releases/download/paramter/quantized_hairmattenet_v2.pth'}
+    'quantized_hairmattenetv1': 'https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/releases/download/paramter/quantized_hairmattenetv1-a32fsc.pth',
+    'quantized_hairmattenetv2': 'https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/releases/download/paramter/quantized_hairmattenetv2-a32fsc.pth'}
 
 model_map = {'hairmattenetv1': MobileHairNet,
              'hairmattenetv2': MobileHairNetV2,

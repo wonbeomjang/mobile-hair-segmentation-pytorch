@@ -58,7 +58,7 @@ class QuantizableMobileHairNetV2(MobileHairNetV2):
         for m in self.modules():
             if type(m) is ConvNormActivation:
                 fuse_modules(m, ["0", "1", "2"], inplace=True)
-            if type(m) is QuantizableInvertedResidual and type(m) is QuantizableLayerDepwiseDecode:
+            if type(m) is QuantizableInvertedResidual or type(m) is QuantizableLayerDepwiseDecode:
                 m.fuse_model()
 
     def quantize(self) -> None:
