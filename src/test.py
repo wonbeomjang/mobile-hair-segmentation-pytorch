@@ -48,8 +48,6 @@ class Tester:
             return
         print(f'[*] Load Model from {ckpt}')
         save_info = torch.load(ckpt, map_location=self.device)
-        if self.quantize:
-            self.net.quantize()
         self.net.load_state_dict(save_info['state_dict'])
 
     def test(self, net=None):
