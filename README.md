@@ -25,7 +25,7 @@ pip install -r requirements.txt
 | quantization version 2 |  92.82  |         133          |      6.82       |
 
 ### Tip
-if you don't apply quantization some part, you can get better performance  
+if you don't apply layer fusion some part, you can get better performance  
 (delete part on [model1](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv1.py#L57)
 delete part on [model2](https://github.com/wonbeomjang/mobile-hair-segmentation-pytorch/blob/b6a0b88fc6499e8fe24208355350c13b51b040a8/models/quantization/modelv2.py#L62))
 
@@ -128,7 +128,7 @@ python torch2tensorrt.py -model_version [1~2]
 ```
 
 ## TensorRt performance
-|                        | IOU (%) | inference speed (ms) | model size (KB) |
+|                        | IOU (%) | inference speed (ms) | model size (MB) |
 |:----------------------:|:-------:|:--------------------:|:---------------:|
 | version1 (MobilenetV1) |  92.48  |          49          |      15.61      |
 |  TensorRT on version1  |  92.48  |          5           |      15.61      |
